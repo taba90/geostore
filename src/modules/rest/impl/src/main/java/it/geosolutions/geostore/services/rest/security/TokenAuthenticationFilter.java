@@ -137,18 +137,22 @@ public abstract class TokenAuthenticationFilter extends GeoStoreAuthenticationFi
         if (authHeader != null
                 && authHeader.trim().toUpperCase().startsWith(tokenPrefix.toUpperCase())) {
             String token = authHeader.substring(tokenPrefix.length()).trim();
-            Authentication auth;
-            try {
-                auth = getCache().get(token).orNull();
-                if (auth != null) {
-                    LOGGER.info("User authenticated using token: " + auth.getName());
-                    SecurityContextHolder.getContext().setAuthentication(auth);
-                }
-            } catch (ExecutionException e) {
-                LOGGER.error("Error authenticating token", e);
-            }
+            authenticate(token);
         }
         
+    }
+
+    protected void authenticate(String token){
+        Authentication auth;
+        try {
+            auth = getCache().get(token).orNull();
+            if (auth != null) {
+                LOGGER.info("User authenticated using token: " + auth.getName());
+                SecurityContextHolder.getContext().setAuthentication(auth);
+            }
+        } catch (ExecutionException e) {
+            LOGGER.error("Error authenticating token", e);
+        }
     }
     
     
