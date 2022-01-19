@@ -33,6 +33,8 @@
 
 	<!-- === SEC ======================================================== -->
 	<import resource="classpath*:geostore-spring-security.xml" />
+
+	<context:component-scan base-package="it.geosolutions.geostore.services.rest.security.oauth2.google"/>
 		
 		
 	<!-- Interceptors -->
