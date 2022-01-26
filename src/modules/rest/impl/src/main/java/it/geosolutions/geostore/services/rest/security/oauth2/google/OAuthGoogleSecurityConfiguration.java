@@ -20,13 +20,16 @@ import org.springframework.security.oauth2.config.annotation.web.configuration.E
 public class OAuthGoogleSecurityConfiguration  extends OAuthGeoStoreSecurityConfiguration {
 
     @Override
-    @Bean(value = "googleOAuth2Resource")
     public OAuth2ProtectedResourceDetails resourceDetails() {
         AuthorizationCodeResourceDetails details =
                 (AuthorizationCodeResourceDetails) super.resourceDetails();
         details.setTokenName("authorization_code");
-
         return details;
+    }
+
+    @Bean(value = "google"+OAUTH2CONFIG)
+    public OAuth2Configuration configuration(){
+        return new OAuth2Configuration();
     }
 
     /** Must have "session" scope */

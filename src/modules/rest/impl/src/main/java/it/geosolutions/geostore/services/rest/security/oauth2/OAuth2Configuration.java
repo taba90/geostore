@@ -41,6 +41,8 @@ public class OAuth2Configuration {
 
     protected String discoveryUrl;
 
+    protected String internalRedirectUri;
+
 
     public AuthenticationEntryPoint getAuthenticationEntryPoint() {
         return new AuthenticationEntryPoint() {
@@ -49,7 +51,7 @@ public class OAuth2Configuration {
                     HttpServletResponse response,
                     AuthenticationException authException)
                     throws IOException {
-                String loginUri=buildloginUri();
+                String loginUri= buildLoginUri();
                 if (getEnableRedirectEntryPoint()
                         || request.getRequestURI().endsWith(getAuthorizationUri())) {
                     response.sendRedirect(loginUri);
@@ -58,7 +60,11 @@ public class OAuth2Configuration {
         };
     }
 
-    public String buildloginUri(){
+    public String buildLoginUri(){
+        return buildLoginUri(new String[]{});
+    }
+
+    public String buildLoginUri(String... additionalScopes){
         final StringBuilder loginUri = new StringBuilder(getAuthorizationUri());
         loginUri.append("?")
                 .append("response_type=code")
@@ -67,8 +73,11 @@ public class OAuth2Configuration {
                 .append(getClientId())
                 .append("&")
                 .append("scope=")
-                .append(getScopes().replace(",", "%20"))
-                .append("&")
+                .append(getScopes().replace(",", "%20"));
+        for (String s:additionalScopes){
+            loginUri.append("%20").append(s);
+        }
+        loginUri.append("&")
                 .append("redirect_uri=")
                 .append(getRedirectUri());
         return loginUri.toString();
@@ -200,5 +209,13 @@ public class OAuth2Configuration {
 
     public void setDiscoveryUrl(String discoveryUrl) {
         this.discoveryUrl = discoveryUrl;
+    }
+
+    public String getInternalRedirectUri() {
+        return internalRedirectUri;
+    }
+
+    public void setInternalRedirectUri(String internalRedirectUri) {
+        this.internalRedirectUri = internalRedirectUri;
     }
 }

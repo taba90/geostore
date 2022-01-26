@@ -23,14 +23,11 @@
 	<security:http auto-config="true" create-session="never" >
 		<security:http-basic entry-point-ref="restAuthenticationEntryPoint"/>
 		<security:csrf disabled="true"/>
-		<!--security:custom-filter ref="authenticationTokenProcessingFilter" before="FORM_LOGIN_FILTER"/>
-		<security:custom-filter ref="sessionTokenProcessingFilter" after="FORM_LOGIN_FILTER"/-->
-		<security:custom-filter ref="googleOAuthFilter" before="FORM_LOGIN_FILTER"/>
+		<security:custom-filter ref="authenticationTokenProcessingFilter" before="FORM_LOGIN_FILTER"/>
+		<security:custom-filter ref="sessionTokenProcessingFilter" after="FORM_LOGIN_FILTER"/>
+		<security:custom-filter ref="googleOAuthFilter" before="CAS_FILTER"/>
 		<security:anonymous />
 	</security:http>
-
-	<bean id="oauthConfig" class="it.geosolutions.geostore.services.rest.security.oauth2.OAuth2Configuration"/>
-
 	<!-- Entry point -->
 	<bean id="restAuthenticationEntryPoint" class="it.geosolutions.geostore.services.rest.security.RestAuthenticationEntryPoint" >
 		<property name="realmName" value="GeoStore"></property>
@@ -43,9 +40,8 @@
 	<context:annotation-config/>
 	<bean id="googleSecConfig" class="it.geosolutions.geostore.services.rest.security.oauth2.google.OAuthGoogleSecurityConfiguration"/>
 	<bean class="it.geosolutions.geostore.services.rest.security.oauth2.google.GoogleOpenIdFilter" id="googleOAuthFilter">
-	  <constructor-arg ref="googleOpenIdRestTemplate"/>
-		<constructor-arg ref="oauthConfig"/>
-		<constructor-arg ref="googleSecConfig"/>
+		<constructor-arg ref="googleOpenIdRestTemplate"/>
+		<constructor-arg ref="googleOAuth2Config"/>
 	</bean>
 	
 	<bean class="it.geosolutions.geostore.services.rest.security.UserAttributeTokenAuthenticationFilter"

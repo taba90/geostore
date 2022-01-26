@@ -16,12 +16,12 @@ import javax.ws.rs.core.Response;
 public interface OAuthLoginRest {
 
     @GET
-    @Path("/google/login")
+    @Path("/{provider}/login")
     @Secured({ "ROLE_USER", "ROLE_ADMIN", "ROLE_ANONYMOUS" })
-    void login() throws NotFoundWebEx;
+    void login(@PathParam("provider") String provider) throws NotFoundWebEx;
 
     @GET
-    @Path("/google/callback")
+    @Path("/{provider}/callback")
     @Secured({ "ROLE_USER", "ROLE_ADMIN"})
-    Response callback() throws NotFoundWebEx;
+    Response callback(@PathParam("provider") String provider) throws NotFoundWebEx;
 }
