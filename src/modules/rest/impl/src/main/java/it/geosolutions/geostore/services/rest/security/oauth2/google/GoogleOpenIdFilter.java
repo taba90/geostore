@@ -1,7 +1,6 @@
 package it.geosolutions.geostore.services.rest.security.oauth2.google;
 
 import it.geosolutions.geostore.services.rest.security.oauth2.DiscoveryClient;
-import it.geosolutions.geostore.services.rest.security.oauth2.IdTokenUsernameProvider;
 import it.geosolutions.geostore.services.rest.security.oauth2.OAuth2Configuration;
 import it.geosolutions.geostore.services.rest.security.oauth2.OpenIdGeoStoreAuthenticationFilter;
 import it.geosolutions.geostore.services.rest.security.oauth2.OAuthGeoStoreSecurityConfiguration;
@@ -16,7 +15,7 @@ public class GoogleOpenIdFilter extends OpenIdGeoStoreAuthenticationFilter {
 
 
     public GoogleOpenIdFilter(OpenIdRestTemplate oAuth2RestOperations, OAuth2Configuration configuration) {
-        super(new GoogleTokenService(), oAuth2RestOperations, configuration, new IdTokenUsernameProvider("email","username"));
+        super(new GoogleTokenService(), oAuth2RestOperations, configuration);
         if (configuration.getDiscoveryUrl()!=null && !"".equals(configuration.getDiscoveryUrl()))
             new DiscoveryClient(configuration.getDiscoveryUrl()).autofill(configuration);
     }

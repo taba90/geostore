@@ -18,7 +18,8 @@ import java.net.URISyntaxException;
 import java.util.Date;
 
 import static it.geosolutions.geostore.services.rest.security.oauth2.OAuthGeoStoreSecurityConfiguration.OAUTH2CONFIG;
-import static it.geosolutions.geostore.services.rest.security.oauth2.OpenIdGeoStoreAuthenticationFilter.ID_TOKEN_PARAM;
+import static it.geosolutions.geostore.services.rest.security.oauth2.OAuthUtils.ACCESS_TOKEN_PARAM;
+import static it.geosolutions.geostore.services.rest.security.oauth2.OAuthUtils.getAccessToken;
 
 public class OAuthLoginRestImpl implements OAuthLoginRest, ApplicationContextAware {
 
@@ -40,12 +41,10 @@ public class OAuthLoginRestImpl implements OAuthLoginRest, ApplicationContextAwa
     @Override
     public Response callback(String provider) throws NotFoundWebEx {
         Response result;
-        String token= (String) RequestContextHolder.getRequestAttributes().getAttribute(OpenIdRestTemplate.ID_TOKEN_VALUE,0);
-        if (token==null)
-            token=(String) RequestContextHolder.getRequestAttributes().getAttribute(OpenIdRestTemplate.ID_TOKEN_VALUE,1);
+        String token= getAccessToken();
         if (token!=null) {
             OAuth2Configuration configuration=(OAuth2Configuration) applicationContext.getBean(provider+OAUTH2CONFIG);
-            NewCookie cookie = new NewCookie(new Cookie(ID_TOKEN_PARAM,token),"",120, DateUtils.addMinutes(new Date(), 2),true,true);
+            NewCookie cookie = new NewCookie(new Cookie(ACCESS_TOKEN_PARAM,token),"",120, DateUtils.addMinutes(new Date(), 2),false,false);
             try {
                 result= Response.status(302)
                         .location(new URI(configuration.getInternalRedirectUri()))

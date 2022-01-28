@@ -19,29 +19,35 @@ public class OpenIdRestTemplate extends OAuth2RestTemplate {
 
     public static final String ID_TOKEN_VALUE = "OpenIdConnect-IdTokenValue";
 
+    private String idTokenParam;
+
 
     public OpenIdRestTemplate(
             OAuth2ProtectedResourceDetails resource, OAuth2ClientContext context,OAuth2Configuration configuration) {
+        this(resource,context,configuration,"id_token");
+    }
+
+    public OpenIdRestTemplate(
+            OAuth2ProtectedResourceDetails resource, OAuth2ClientContext context,OAuth2Configuration configuration,String idTokenParam) {
         super(resource, context);
         this.store=new JwkTokenStore(configuration.getIdTokenUri());
+        this.idTokenParam=idTokenParam;
     }
 
     @Override
     public OAuth2AccessToken getAccessToken() throws UserRedirectRequiredException {
         OAuth2AccessToken token = super.getAccessToken();
-        if (token != null) validate(token);
+        if (token != null) extractIDToken(token);
         return token;
     }
 
-    private void validate(OAuth2AccessToken token) {
-        Object maybeIdToken = token.getAdditionalInformation().get("id_token");
+    protected void extractIDToken(OAuth2AccessToken token) {
+        Object maybeIdToken = token.getAdditionalInformation().get(idTokenParam);
         if (maybeIdToken instanceof String) {
             String idToken = (String) maybeIdToken;
             setAsRequestAttribute(ID_TOKEN_VALUE, idToken);
             // among other things, this verifies the token
             if (store != null) store.readAuthentication(idToken);
-            // TODO: the authentication just read could contain roles, could be treated as
-            // another role source... but needs to be made available to role computation
         }
     }
 

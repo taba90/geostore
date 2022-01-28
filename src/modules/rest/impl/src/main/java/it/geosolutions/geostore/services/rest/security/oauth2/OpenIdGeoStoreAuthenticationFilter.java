@@ -1,8 +1,10 @@
 package it.geosolutions.geostore.services.rest.security.oauth2;
 
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import it.geosolutions.geostore.core.model.User;
 import it.geosolutions.geostore.core.model.enums.Role;
-import it.geosolutions.geostore.core.security.password.SecurityUtils;
 import it.geosolutions.geostore.services.UserService;
 import it.geosolutions.geostore.services.exception.BadRequestServiceEx;
 import it.geosolutions.geostore.services.exception.NotFoundServiceEx;
@@ -21,10 +23,9 @@ import org.springframework.security.oauth2.client.resource.UserRedirectRequiredE
 import org.springframework.security.oauth2.client.token.AccessTokenRequest;
 import org.springframework.security.oauth2.client.token.grant.code.AuthorizationCodeResourceDetails;
 import org.springframework.security.oauth2.common.DefaultOAuth2AccessToken;
-import org.springframework.security.oauth2.provider.authentication.BearerTokenExtractor;
+import org.springframework.security.oauth2.common.OAuth2AccessToken;
 import org.springframework.security.oauth2.provider.token.RemoteTokenServices;
 import org.springframework.security.web.AuthenticationEntryPoint;
-import org.springframework.security.web.authentication.WebAuthenticationDetails;
 import org.springframework.security.web.authentication.preauth.PreAuthenticatedAuthenticationToken;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -41,21 +42,21 @@ import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Enumeration;
 import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.google.common.collect.Lists.newArrayList;
 import static it.geosolutions.geostore.core.security.password.SecurityUtils.getUsername;
+import static it.geosolutions.geostore.services.rest.security.oauth2.OAuthUtils.ACCESS_TOKEN_PARAM;
 
 public abstract class OpenIdGeoStoreAuthenticationFilter extends OAuth2ClientAuthenticationProcessingFilter {
 
     private final static Logger LOGGER = Logger.getLogger(OpenIdGeoStoreAuthenticationFilter.class);
 
-    protected static final String ID_TOKEN_PARAM ="id_token";
-
-    protected static final String ACCESS_TOKEN_PARAM ="access_token";
 
     @Autowired
     protected UserService userService;
@@ -68,11 +69,14 @@ public abstract class OpenIdGeoStoreAuthenticationFilter extends OAuth2ClientAut
 
     private AuthenticationEntryPoint authEntryPoint;
 
-    protected PreAuthUsernameProvider preAuthUsernameProvider;
+    private LoadingCache<String, Optional<Authentication>> cache;
+
+    private int cacheSize = 1000;
+    private int cacheExpiration = 60;
 
 
 
-    public OpenIdGeoStoreAuthenticationFilter(RemoteTokenServices tokenServices, OpenIdRestTemplate oAuth2RestOperations, OAuth2Configuration configuration,PreAuthUsernameProvider preAuthUsernameProvider){
+    public OpenIdGeoStoreAuthenticationFilter(RemoteTokenServices tokenServices, OpenIdRestTemplate oAuth2RestOperations, OAuth2Configuration configuration){
         super("/**");
         super.setTokenServices(tokenServices);
         this.tokenServices=tokenServices;
@@ -80,8 +84,6 @@ public abstract class OpenIdGeoStoreAuthenticationFilter extends OAuth2ClientAut
         this.filter=new OAuth2ClientAuthenticationProcessingFilter("/");
         this.configuration=configuration;
         this.authEntryPoint=configuration.getAuthenticationEntryPoint();
-        this.preAuthUsernameProvider =preAuthUsernameProvider;
-
     }
 
     @Override
@@ -93,18 +95,57 @@ public abstract class OpenIdGeoStoreAuthenticationFilter extends OAuth2ClientAut
     @Override
     public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException, IOException, ServletException {
         Authentication authentication=null;
-        PreAuthUsernameDetails details= preAuthUsernameProvider.getUsername(request,response);
-        String username=details!=null?details.getUsername():null;
-        boolean expired=details!=null?details.isExpired():false;
-        if (username!=null && !expired) authentication=createPreAuthentication(username,request,response);
-        if (authentication==null){
-            String accessToken = OAuthUtils.tokenFromParamsOrBearer(ACCESS_TOKEN_PARAM,request);
-            if (accessToken!=null) clearState();
-            authentication = performOAuthAuthentication(request, new StatusResponseWrapper(response), accessToken,expired);
+        if (SecurityContextHolder.getContext().getAuthentication()==null) {
+            String token = OAuthUtils.tokenFromParamsOrBearer(ACCESS_TOKEN_PARAM, request);
+            LoadingCache<String, Optional<Authentication>> localCache = getCache();
+            if (token!=null) {
+                try {
+                    authentication = localCache.get(token).get();
+                } catch (ExecutionException e) {
+                    LOGGER.error("Error while retrieving the Authentication from Access token. Exception is: ", e.getCause());
+                }
+                if (authentication==null) {
+                    authentication=authenticateAndUpdateCache(request,response,token,new DefaultOAuth2AccessToken(token));
+                } else {
+                    TokenDetails details = tokenDetails(authentication);
+                    OAuth2AccessToken accessToken = details.getAccessToken();
+                    if (accessToken.isExpired())
+                        invalidateAndUpdateCache(request, response, token, accessToken);
+                }
+            } else {
+                clearState();
+                authentication=authenticateAndUpdateCache(request,response,null,null);
+            }
         }
         return authentication;
     }
 
+    private TokenDetails tokenDetails(Authentication authentication){
+        TokenDetails tokenDetails=null;
+        Object details=authentication.getDetails();
+        if (details instanceof TokenDetails){
+            tokenDetails=((TokenDetails)details);
+        }
+        return tokenDetails;
+    }
+
+
+    private Authentication invalidateAndUpdateCache(HttpServletRequest request, HttpServletResponse response, String token, OAuth2AccessToken accessToken){
+        getCache().invalidate(token);
+        return authenticateAndUpdateCache(request,response,token,accessToken);
+    }
+
+    private Authentication authenticateAndUpdateCache(HttpServletRequest request, HttpServletResponse response, String token, OAuth2AccessToken accessToken){
+        Authentication authentication=performOAuthAuthentication(request,response,accessToken);
+        if (authentication!=null) {
+            TokenDetails tokenDetails = tokenDetails(authentication);
+            if (tokenDetails != null) {
+                token = tokenDetails.getAccessToken().getValue();
+            }
+            getCache().asMap().put(token, Optional.ofNullable(authentication));
+        }
+        return authentication;
+    }
 
     private void clearState(){
         OAuth2ClientContext clientContext = restTemplate.getOAuth2ClientContext();
@@ -128,13 +169,28 @@ public abstract class OpenIdGeoStoreAuthenticationFilter extends OAuth2ClientAut
         }
     }
 
+    protected LoadingCache<String, Optional<Authentication>> getCache() {
+        if(cache == null) {
 
-    protected Authentication performOAuthAuthentication(HttpServletRequest request, StatusResponseWrapper response, String accessToken,boolean expiredPreAuth) {
+            cache = CacheBuilder.newBuilder()
+                    .maximumSize(cacheSize)
+                    .refreshAfterWrite(cacheExpiration, TimeUnit.SECONDS)
+                    .build(new CacheLoader<String, Optional<Authentication>>() {
+                        public Optional<Authentication> load(String accessToken) {
+                            return Optional.ofNullable(performOAuthAuthentication(getRequest(),getResponse(),new DefaultOAuth2AccessToken(accessToken)));
+                        }
+                    });
+        }
+        return cache;
+    }
+
+
+    protected Authentication performOAuthAuthentication(HttpServletRequest request, HttpServletResponse response, OAuth2AccessToken accessToken) {
 
         String principal = null;
         PreAuthenticatedAuthenticationToken result = null;
         try {
-            principal = getPreAuthenticatedPrincipal(request, response, accessToken,expiredPreAuth);
+            principal = getPreAuthenticatedPrincipal(request, response, accessToken);
         } catch (IOException e1) {
             LOGGER.error(e1.getMessage(), e1);
             principal = null;
@@ -152,16 +208,15 @@ public abstract class OpenIdGeoStoreAuthenticationFilter extends OAuth2ClientAut
 
     }
 
-    protected String getPreAuthenticatedPrincipal(HttpServletRequest req, StatusResponseWrapper resp, String accessToken, boolean expiredPreAuth)
+    protected String getPreAuthenticatedPrincipal(HttpServletRequest req, HttpServletResponse resp, OAuth2AccessToken accessToken)
             throws IOException, ServletException {
 
         // Make sure the REST Resource Template has been correctly configured
         configureRestTemplate();
-
         if (accessToken != null) {
             restTemplate
                     .getOAuth2ClientContext()
-                    .setAccessToken(new DefaultOAuth2AccessToken(accessToken));
+                    .setAccessToken(accessToken);
         }
 
         // Setting up OAuth2 Filter services and resource template
@@ -170,14 +225,15 @@ public abstract class OpenIdGeoStoreAuthenticationFilter extends OAuth2ClientAut
 
         // Validating the access_token
         Authentication authentication = null;
+        StatusResponseWrapper respWrap=new StatusResponseWrapper(resp);
         try {
-            authentication = super.attemptAuthentication(req, resp);
+            authentication = super.attemptAuthentication(req, respWrap);
             if (authentication!=null && LOGGER.isDebugEnabled())
                 LOGGER.debug(
                     "Authenticated OAuth request for principal "+
                     authentication.getPrincipal());
         } catch (Exception e) {
-            handleOAuthException(e,req,resp,expiredPreAuth);
+            handleOAuthException(e,req,respWrap);
         }
 
         String username =
@@ -188,8 +244,8 @@ public abstract class OpenIdGeoStoreAuthenticationFilter extends OAuth2ClientAut
         return username;
     }
 
-    private void handleOAuthException(Exception e, HttpServletRequest req, StatusResponseWrapper resp, boolean expiredPreAuth) throws IOException, ServletException {
-        if (e instanceof UserRedirectRequiredException && expiredPreAuth) {
+    private void handleOAuthException(Exception e, HttpServletRequest req, StatusResponseWrapper resp) throws IOException, ServletException {
+        if (e instanceof UserRedirectRequiredException && configuration.getEnableRedirectEntryPoint()) {
             handleUserRedirection(req,resp);
         } else if (e instanceof BadCredentialsException
                 || e instanceof ResourceAccessException) {
@@ -276,7 +332,10 @@ public abstract class OpenIdGeoStoreAuthenticationFilter extends OAuth2ClientAut
         User user=retrieveUserWithAuthorities(username,request,response);
         SimpleGrantedAuthority authority=new SimpleGrantedAuthority("ROLE_"+user.getRole().toString());
         PreAuthenticatedAuthenticationToken authenticationToken=new PreAuthenticatedAuthenticationToken(user,null, Arrays.asList(authority));
-        authenticationToken.setDetails(new WebAuthenticationDetails(request));
+        String idToken=OAuthUtils.getIdToken();
+        OAuth2AccessToken accessToken=restTemplate.getOAuth2ClientContext().getAccessToken();
+        if (idToken!=null)
+            authenticationToken.setDetails(new TokenDetails(accessToken,idToken));
         return authenticationToken;
     }
 
@@ -340,5 +399,15 @@ public abstract class OpenIdGeoStoreAuthenticationFilter extends OAuth2ClientAut
                 LOGGER.debug("Updated SecurityContextHolder to contain null Authentication");
             }
         }
+    }
+
+    protected HttpServletRequest getRequest() {
+        return ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes())
+                .getRequest();
+    }
+
+    protected HttpServletResponse getResponse(){
+        return ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes())
+                .getResponse();
     }
 }
