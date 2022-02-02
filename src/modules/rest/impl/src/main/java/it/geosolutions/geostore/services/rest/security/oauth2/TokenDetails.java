@@ -9,15 +9,16 @@ import java.io.Serializable;
 
 public class TokenDetails implements Serializable {
 
-    private DecodedJWT jwtToken;
+    private String idToken;
     private OAuth2AccessToken accessToken;
 
     public TokenDetails(OAuth2AccessToken accessToken, String idToken){
-        this.jwtToken= JWT.decode(idToken);
+        this.idToken= idToken;
         this.accessToken=accessToken;
     }
 
     public <T> T getClaim(String claimName, Class<T> binding){
+        DecodedJWT jwtToken=JWT.decode(idToken);
         Claim claim=jwtToken.getClaim(claimName);
         T result=null;
         if (claim!=null)
@@ -25,7 +26,15 @@ public class TokenDetails implements Serializable {
         return result;
     }
 
+    public String getIdToken() {
+        return idToken;
+    }
+
     public OAuth2AccessToken getAccessToken() {
         return accessToken;
+    }
+
+    public void setAccessToken(OAuth2AccessToken accessToken) {
+        this.accessToken = accessToken;
     }
 }

@@ -39,9 +39,11 @@
 
 	<context:annotation-config/>
 	<bean id="googleSecConfig" class="it.geosolutions.geostore.services.rest.security.oauth2.google.OAuthGoogleSecurityConfiguration"/>
+	<bean id="oauth2Cache" class="it.geosolutions.geostore.services.rest.security.oauth2.OAuth2Cache"/>
 	<bean class="it.geosolutions.geostore.services.rest.security.oauth2.google.GoogleOpenIdFilter" id="googleOAuthFilter">
 		<constructor-arg ref="googleOpenIdRestTemplate"/>
 		<constructor-arg ref="googleOAuth2Config"/>
+		<constructor-arg ref="oauth2Cache"/>
 	</bean>
 	
 	<bean class="it.geosolutions.geostore.services.rest.security.UserAttributeTokenAuthenticationFilter"

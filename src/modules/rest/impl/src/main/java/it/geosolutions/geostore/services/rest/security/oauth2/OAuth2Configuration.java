@@ -35,8 +35,6 @@ public class OAuth2Configuration {
 
     protected Boolean autoCreateUser=false;
 
-    protected String refreshTokenUri;
-
     protected String idTokenUri;
 
     protected String discoveryUrl;
@@ -61,10 +59,12 @@ public class OAuth2Configuration {
     }
 
     public String buildLoginUri(){
-        return buildLoginUri(new String[]{});
+        return buildLoginUri("online",new String[]{});
     }
-
-    public String buildLoginUri(String... additionalScopes){
+    public String buildLoginUri(String accessType) {
+        return buildLoginUri(accessType,new String[]{});
+    }
+    public String buildLoginUri(String accessType,String... additionalScopes){
         final StringBuilder loginUri = new StringBuilder(getAuthorizationUri());
         loginUri.append("?")
                 .append("response_type=code")
@@ -80,7 +80,21 @@ public class OAuth2Configuration {
         loginUri.append("&")
                 .append("redirect_uri=")
                 .append(getRedirectUri());
+        loginUri.append("&").append("access_type=").append(accessType);
         return loginUri.toString();
+    }
+
+    public String buildRefreshTokenURI(String accessType){
+        final StringBuilder refreshUri = new StringBuilder(getAccessTokenUri());
+        refreshUri.append("?")
+                .append("&")
+                .append("client_id=")
+                .append(getClientId())
+                .append("&")
+                .append("scope=")
+                .append(getScopes().replace(",", "%20"))
+                .append("&").append("access_type=").append(accessType);
+        return refreshUri.toString();
     }
 
     public String getClientId() {
@@ -177,14 +191,6 @@ public class OAuth2Configuration {
 
     public void setAutoCreateUser(Boolean autoCreateUser) {
         this.autoCreateUser = autoCreateUser;
-    }
-
-    public String getRefreshTokenUri() {
-        return refreshTokenUri;
-    }
-
-    public void setRefreshTokenUri(String refreshTokenUri) {
-        this.refreshTokenUri = refreshTokenUri;
     }
 
     public boolean isEnableRedirectEntryPoint() {

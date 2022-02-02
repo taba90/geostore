@@ -126,5 +126,5 @@ public class MockedUserGroupService implements UserGroupService {
 		// TODO Auto-generated method stub
 		return 0;
 	}
-	
+
 }
