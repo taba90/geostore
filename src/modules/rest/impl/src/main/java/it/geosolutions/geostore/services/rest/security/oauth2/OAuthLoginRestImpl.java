@@ -200,7 +200,7 @@ public class OAuthLoginRestImpl implements OAuthLoginRest, ApplicationContextAwa
                     toDelete.setPath("/");
                     toDelete.setComment("EXPIRING COOKIE at " + System.currentTimeMillis());
                     Cookie cookie=new Cookie(toDelete.getName(),toDelete.getValue(),toDelete.getPath(),toDelete.getDomain());
-                    builder.cookie(new NewCookie(cookie,toDelete.getComment(),toDelete.getMaxAge(),false));
+                    builder.cookie(new AccessCookie(cookie,toDelete.getComment(),toDelete.getMaxAge(),false,"lax"));
                     response.addCookie(toDelete);
                 }
             }
@@ -267,7 +267,7 @@ public class OAuthLoginRestImpl implements OAuthLoginRest, ApplicationContextAwa
 
     private NewCookie cookie(String name, String value){
         Cookie cookie=new Cookie(name,value,"/",null);
-        return new NewCookie(cookie,"",60*60*24*1000, DateUtils.addDays(new Date(), 1),false,false);
+        return new AccessCookie(cookie,"",60*60*24*1000, DateUtils.addDays(new Date(), 1),false,false,"lax");
     }
 
     @Override
