@@ -12,7 +12,7 @@ public class DiscoveryClient {
     private static final String AUTHORIZATION_ENDPOINT_ATTR_NAME = "authorization_endpoint";
     private static final String TOKEN_ENDPOINT_ATTR_NAME = "token_endpoint";
     private static final String USERINFO_ENDPOINT_ATTR_NAME = "userinfo_endpoint";
-    private static final String END_SESSION_ENDPONT = "end_session_endpoint";
+    private static final String END_SESSION_ENDPOINT = "end_session_endpoint";
     private static final String JWK_SET_URI_ATTR_NAME = "jwks_uri";
     private static final String SCOPES_SUPPORTED = "scopes_supported";
     private static final String REVOCATION_ENDPOINT = "revocation_endpoint";
@@ -55,29 +55,61 @@ public class DiscoveryClient {
 
     public void autofill(OAuth2Configuration conf) {
         Map response = restTemplate.getForObject(this.location, Map.class);
-        Optional.ofNullable(response.get(AUTHORIZATION_ENDPOINT_ATTR_NAME))
+        Optional.ofNullable(response.get(getAuthorizationEndpointAttrName()))
                 .ifPresent(uri -> conf.setAuthorizationUri((String) uri));
-        Optional.ofNullable(response.get(TOKEN_ENDPOINT_ATTR_NAME))
+        Optional.ofNullable(response.get(getTokenEndpointAttrName()))
                 .ifPresent(uri -> conf.setAccessTokenUri((String) uri));
-        Optional.ofNullable(response.get(USERINFO_ENDPOINT_ATTR_NAME))
+        Optional.ofNullable(response.get(getUserinfoEndpointAttrName()))
                 .ifPresent(uri -> conf.setCheckTokenEndpointUrl((String) uri));
-        Optional.ofNullable(response.get(JWK_SET_URI_ATTR_NAME))
+        Optional.ofNullable(response.get(getJwkSetUriAttrName()))
                 .ifPresent(uri -> conf.setIdTokenUri((String) uri));
-        Optional.ofNullable(response.get(END_SESSION_ENDPONT))
+        Optional.ofNullable(response.get(getEndSessionEndpoint()))
                 .ifPresent(uri -> conf.setLogoutUri((String) uri));
-        Optional.ofNullable(response.get(SCOPES_SUPPORTED))
+        Optional.ofNullable(response.get(getScopesSupported()))
                 .ifPresent(
                         s -> {
                             @SuppressWarnings("unchecked")
                             List<String> scopes = (List<String>) s;
                             conf.setScopes(collectScopes(scopes));
                         });
-        Optional.ofNullable(response.get(REVOCATION_ENDPOINT))
+        Optional.ofNullable(response.get(getRevocationEndpoint()))
                 .ifPresent(
                         s -> conf.setRevokeEndpoint((String) s));
     }
 
     private String collectScopes(List<String> scopes) {
         return scopes.stream().collect(Collectors.joining(" "));
+    }
+
+    protected String getUserinfoEndpointAttrName() {
+        return USERINFO_ENDPOINT_ATTR_NAME;
+    }
+
+    protected String getEndSessionEndpoint() {
+        return END_SESSION_ENDPOINT;
+    }
+
+    protected String getJwkSetUriAttrName() {
+        return JWK_SET_URI_ATTR_NAME;
+    }
+
+    protected String getProviderEndPath() {
+        return PROVIDER_END_PATH;
+    }
+
+    protected String getAuthorizationEndpointAttrName() {
+        return AUTHORIZATION_ENDPOINT_ATTR_NAME;
+    }
+
+    protected String getTokenEndpointAttrName() {
+        return TOKEN_ENDPOINT_ATTR_NAME;
+    }
+
+    protected String getScopesSupported() {
+        return SCOPES_SUPPORTED;
+    }
+
+    protected String getRevocationEndpoint() {
+        return REVOCATION_ENDPOINT;
     }
 }

@@ -3,9 +3,7 @@ package it.geosolutions.geostore.services.rest.security.oauth2;
 import it.geosolutions.geostore.core.model.User;
 import it.geosolutions.geostore.core.model.UserAttribute;
 import it.geosolutions.geostore.core.model.UserGroup;
-import it.geosolutions.geostore.core.model.enums.GroupReservedNames;
 import it.geosolutions.geostore.core.model.enums.Role;
-import it.geosolutions.geostore.services.UserGroupService;
 import it.geosolutions.geostore.services.UserService;
 import it.geosolutions.geostore.services.exception.BadRequestServiceEx;
 import it.geosolutions.geostore.services.exception.NotFoundServiceEx;
@@ -55,9 +53,9 @@ import static it.geosolutions.geostore.services.rest.SessionServiceDelegate.PROV
 import static it.geosolutions.geostore.services.rest.security.oauth2.OAuthUtils.ACCESS_TOKEN_PARAM;
 import static it.geosolutions.geostore.services.rest.security.oauth2.OAuthUtils.REFRESH_TOKEN_PARAM;
 
-public abstract class OpenIdGeoStoreAuthenticationFilter extends OAuth2ClientAuthenticationProcessingFilter {
+public abstract class OAuthGeoStoreAuthenticationFilter extends OAuth2ClientAuthenticationProcessingFilter {
 
-    private final static Logger LOGGER = Logger.getLogger(OpenIdGeoStoreAuthenticationFilter.class);
+    private final static Logger LOGGER = Logger.getLogger(OAuthGeoStoreAuthenticationFilter.class);
 
 
     @Autowired
@@ -73,7 +71,7 @@ public abstract class OpenIdGeoStoreAuthenticationFilter extends OAuth2ClientAut
 
 
 
-    public OpenIdGeoStoreAuthenticationFilter(RemoteTokenServices tokenServices, OpenIdRestTemplate oAuth2RestOperations, OAuth2Configuration configuration,OAuth2Cache oAuth2Cache){
+    public OAuthGeoStoreAuthenticationFilter(RemoteTokenServices tokenServices, GeoStoreOAuthRestTemplate oAuth2RestOperations, OAuth2Configuration configuration, OAuth2Cache oAuth2Cache){
         super("/**");
         super.setTokenServices(tokenServices);
         this.tokenServices=tokenServices;
@@ -85,14 +83,17 @@ public abstract class OpenIdGeoStoreAuthenticationFilter extends OAuth2ClientAut
 
     @Override
     public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain) throws IOException, ServletException {
-        if (!configuration.isInvalid() && SecurityContextHolder.getContext().getAuthentication()==null)
+        Authentication authentication=SecurityContextHolder.getContext().getAuthentication();
+        if (!configuration.isInvalid() && authentication==null)
             super.doFilter(req, res, chain);
+        else if (req instanceof HttpServletRequest)
+            addRequestAttributes((HttpServletRequest)req,authentication);
         chain.doFilter(req,res);
     }
 
     @Override
     public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException, IOException, ServletException {
-        Authentication authentication=SecurityContextHolder.getContext().getAuthentication();
+        Authentication authentication;
             String token = OAuthUtils.tokenFromParamsOrBearer(ACCESS_TOKEN_PARAM, request);
             if (token!=null) {
                 authentication = cache.get(token);
@@ -370,13 +371,18 @@ public abstract class OpenIdGeoStoreAuthenticationFilter extends OAuth2ClientAut
 
         SecurityContextHolder.getContext().setAuthentication(authResult);
         TokenDetails tokenDetails=tokenDetails(authResult);
+        addRequestAttributes(request,authResult);
+        request.setAttribute(PROVIDER_KEY,configuration.getProvider());
+    }
+
+    private void addRequestAttributes(HttpServletRequest request,Authentication authentication){
+        TokenDetails tokenDetails=tokenDetails(authentication);
         if (tokenDetails!=null && tokenDetails.getAccessToken() !=null){
             OAuth2AccessToken accessToken=tokenDetails.getAccessToken();
             request.setAttribute(ACCESS_TOKEN_PARAM, accessToken.getValue());
             if (accessToken.getRefreshToken()!=null)
                 request.setAttribute(REFRESH_TOKEN_PARAM,accessToken.getRefreshToken().getValue());
         }
-        request.setAttribute(PROVIDER_KEY,configuration.getProvider());
     }
 
     @Override

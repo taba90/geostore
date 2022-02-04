@@ -60,9 +60,8 @@
 	</bean>
 
 	<bean id="oauth2SessionServiceDelegate"
-		  class="it.geosolutions.geostore.services.rest.security.oauth2.OAuthSessionServiceDelegate">
+		  class="it.geosolutions.geostore.services.rest.security.oauth2.google.GoogleSessionServiceDelegate">
 		<constructor-arg ref="restSessionService"/>
-		<constructor-arg value="google"/>
 	</bean>
 	<!-- bean class="it.geosolutions.geostore.services.rest.security.WebServiceTokenAuthenticationFilter"
         id="authenticationTokenProcessingFilter">

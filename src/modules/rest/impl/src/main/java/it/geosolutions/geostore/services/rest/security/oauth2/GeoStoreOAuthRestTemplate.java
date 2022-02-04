@@ -12,7 +12,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.util.Optional;
 
-public class OpenIdRestTemplate extends OAuth2RestTemplate {
+public class GeoStoreOAuthRestTemplate extends OAuth2RestTemplate {
 
     private JwkTokenStore store;
 
@@ -22,12 +22,12 @@ public class OpenIdRestTemplate extends OAuth2RestTemplate {
     private String idTokenParam;
 
 
-    public OpenIdRestTemplate(
+    public GeoStoreOAuthRestTemplate(
             OAuth2ProtectedResourceDetails resource, OAuth2ClientContext context,OAuth2Configuration configuration) {
         this(resource,context,configuration,"id_token");
     }
 
-    public OpenIdRestTemplate(
+    public GeoStoreOAuthRestTemplate(
             OAuth2ProtectedResourceDetails resource, OAuth2ClientContext context,OAuth2Configuration configuration,String idTokenParam) {
         super(resource, context);
         this.store=new JwkTokenStore(configuration.getIdTokenUri());

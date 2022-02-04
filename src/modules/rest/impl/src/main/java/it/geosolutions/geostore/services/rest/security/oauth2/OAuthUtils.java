@@ -2,11 +2,7 @@ package it.geosolutions.geostore.services.rest.security.oauth2;
 
 import it.geosolutions.geostore.core.security.password.SecurityUtils;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.common.OAuth2AccessToken;
-import org.springframework.security.oauth2.common.OAuth2RefreshToken;
 import org.springframework.security.oauth2.provider.authentication.BearerTokenExtractor;
-import org.springframework.security.oauth2.provider.authentication.OAuth2AuthenticationDetails;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
@@ -57,7 +53,7 @@ public class OAuthUtils {
     }
 
     static String getIdToken(){
-        return getToken(OpenIdRestTemplate.ID_TOKEN_VALUE);
+        return getToken(GeoStoreOAuthRestTemplate.ID_TOKEN_VALUE);
     }
 
     static String getAccessToken(){

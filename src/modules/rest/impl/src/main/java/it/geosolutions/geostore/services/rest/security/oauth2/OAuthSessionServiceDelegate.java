@@ -4,13 +4,16 @@ import it.geosolutions.geostore.services.rest.RESTSessionService;
 import it.geosolutions.geostore.services.rest.SessionServiceDelegate;
 import it.geosolutions.geostore.services.rest.exception.NotFoundWebEx;
 import it.geosolutions.geostore.services.rest.model.SessionToken;
+import org.apache.log4j.Logger;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
+import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.ClientHttpRequest;
 import org.springframework.http.converter.FormHttpMessageConverter;
 import org.springframework.security.core.Authentication;
@@ -39,10 +42,15 @@ import static it.geosolutions.geostore.services.rest.security.oauth2.OAuthUtils.
 import static it.geosolutions.geostore.services.rest.security.oauth2.OAuthUtils.REFRESH_TOKEN_PARAM;
 import static it.geosolutions.geostore.services.rest.security.oauth2.OAuthUtils.getParameterValue;
 import static it.geosolutions.geostore.services.rest.security.oauth2.OAuthUtils.getRequest;
+import static it.geosolutions.geostore.services.rest.security.oauth2.OAuthUtils.getResponse;
+import static it.geosolutions.geostore.services.rest.security.oauth2.OAuthUtils.getTokenDetails;
 
-public class OAuthSessionServiceDelegate implements SessionServiceDelegate, ApplicationContextAware {
+public abstract class OAuthSessionServiceDelegate implements SessionServiceDelegate, ApplicationContextAware {
 
     private ApplicationContext applicationContext;
+
+    private final static Logger LOGGER = Logger.getLogger(OAuthSessionServiceDelegate.class);
+
 
     public OAuthSessionServiceDelegate(RESTSessionService restSessionService,String delegateName){
         restSessionService.registerDelegate(delegateName,this);
@@ -60,23 +68,38 @@ public class OAuthSessionServiceDelegate implements SessionServiceDelegate, Appl
         if (refreshToken==null) refreshToken=getParameterValue(REFRESH_TOKEN_PARAM,request);
         Date fiveMinutesFromNow=fiveMinutesFromNow();
         SessionToken sessionToken=null;
+        OAuth2Configuration configuration = configuration();
         if ((expiresIn==null || fiveMinutesFromNow.after(expiresIn)) && refreshToken!=null) {
-            OAuth2Configuration configuration = configuration();
-            MultiValueMap<String, String> form = new LinkedMultiValueMap<String, String>();
-            form.add("grant_type", "refresh_token");
-            form.add("refresh_token", refreshToken);
-            form.add("client_secret", configuration.getClientSecret());
-            RestTemplate restTemplate = new RestTemplate();
-            HttpHeaders headers = new HttpHeaders();
-            OAuth2AccessToken newToken = restTemplate.execute(configuration.buildRefreshTokenURI("offline"), HttpMethod.POST, new RefreshTokenRequestCallback(form, headers), tokenExtractor());
-            if (newToken != null && newToken.getValue()!=null) {
-                String refreshed = newToken.getValue();
-                rebuildTokenAuth(accessToken, newToken, refreshToken);
-                sessionToken=sessionToken(refreshed,refreshToken,newToken.getExpiration());
-            }
+            doRefresh(refreshToken,accessToken, configuration);
         }
         if(sessionToken==null)
             sessionToken=sessionToken(accessToken,refreshToken,currentToken.getExpiration());
+        return sessionToken;
+    }
+
+    protected SessionToken doRefresh(String refreshToken, String accessToken, OAuth2Configuration configuration){
+        SessionToken sessionToken=null;
+        MultiValueMap<String, String> form = new LinkedMultiValueMap<String, String>();
+        form.add("grant_type", "refresh_token");
+        form.add("refresh_token", refreshToken);
+        form.add("client_secret", configuration.getClientSecret());
+        RestTemplate restTemplate = new RestTemplate();
+        HttpHeaders headers = new HttpHeaders();
+        OAuth2AccessToken newToken = restTemplate.execute(configuration.buildRefreshTokenURI("offline"), HttpMethod.POST, new RefreshTokenRequestCallback(form, headers), tokenExtractor());
+        if (newToken != null && newToken.getValue()!=null) {
+            String refreshed = newToken.getValue();
+            rebuildTokenAuth(accessToken, newToken, refreshToken);
+            sessionToken=sessionToken(refreshed,refreshToken,newToken.getExpiration());
+        } else {
+            LOGGER.info("Unable to refresh the token. The following request was performed: "+ configuration.buildRefreshTokenURI("offline")+". Redirecting to login.");
+            doLogout(null);
+            try {
+                getResponse().sendRedirect("../../openid/" + configuration.getProvider().toLowerCase() + "/login");
+            } catch (IOException e){
+                LOGGER.error("Error while sending redirect to login service. ",e);
+                throw new RuntimeException(e);
+            }
+        }
         return sessionToken;
     }
 
@@ -140,20 +163,20 @@ public class OAuthSessionServiceDelegate implements SessionServiceDelegate, Appl
     @Override
     public void doLogout(String accessToken) {
         HttpServletRequest request=OAuthUtils.getRequest();
-        HttpServletResponse response=OAuthUtils.getResponse();
+        HttpServletResponse response= getResponse();
         OAuth2RestTemplate restTemplate=applicationContext.getBean(OAuth2RestTemplate.class);
         if (accessToken==null)
             accessToken=OAuthUtils.getParameterValue(ACCESS_TOKEN_PARAM,getRequest());
         OAuth2Cache cache=cache();
+        Authentication authentication=cache.get(accessToken);
+        OAuth2AccessToken token=null;
+        TokenDetails tokenDetails=getTokenDetails(authentication);
+        if (tokenDetails!=null) token=tokenDetails.getAccessToken();
         cache.removeEntry(accessToken);
-        OAuth2AccessToken token = restTemplate.getOAuth2ClientContext().getAccessToken();
+        if (token==null)
+            token = restTemplate.getOAuth2ClientContext().getAccessToken();
         if (token != null) {
-            HttpHeaders headers = new HttpHeaders();
-            OAuth2Configuration configuration=configuration();
-            RestTemplate template=new RestTemplate();
-            if (configuration.getRevokeEndpoint()!=null){
-                //template.exchange(configuration.getRevokeEndpoint()+"?token="+token.getValue(),HttpMethod.POST,new RefreshTokenRequestCallback(new LinkedMultiValueMap<>(),headers));
-            }
+            revokeAuthorization(token);
             final AccessTokenRequest accessTokenRequest =
                     restTemplate.getOAuth2ClientContext().getAccessTokenRequest();
             if (accessTokenRequest != null && accessTokenRequest.getStateKey() != null) {
@@ -172,11 +195,17 @@ public class OAuthSessionServiceDelegate implements SessionServiceDelegate, Appl
         clearCookies(request,response);
     }
 
-    private void revokeAuthorization(){
-
+    protected void revokeAuthorization(OAuth2AccessToken token){
+        String tokenValue=token.getRefreshToken()!=null?token.getRefreshToken().getValue():token.getValue();
+        OAuth2Configuration configuration=configuration();
+        if (configuration.getRevokeEndpoint()!=null && tokenValue!=null){
+            callRevokeEndpoint(tokenValue,configuration.getRevokeEndpoint());
+        }
     }
 
-    private void clearCookies(HttpServletRequest request, HttpServletResponse response){
+    protected abstract void callRevokeEndpoint(String token, String url);
+
+    protected void clearCookies(HttpServletRequest request, HttpServletResponse response){
         javax.servlet.http.Cookie[] allCookies = request.getCookies();
         if (allCookies!=null && allCookies.length>0)
             for (int i = 0; i < allCookies.length; i++) {
@@ -190,7 +219,7 @@ public class OAuthSessionServiceDelegate implements SessionServiceDelegate, Appl
             }
     }
 
-    private boolean deleteCookie(javax.servlet.http.Cookie c){
+    protected boolean deleteCookie(javax.servlet.http.Cookie c){
         return c.getName().equalsIgnoreCase("JSESSIONID") || c.getName().equalsIgnoreCase(ACCESS_TOKEN_PARAM) || c.getName().equalsIgnoreCase(REFRESH_TOKEN_PARAM);
     }
 
@@ -199,15 +228,17 @@ public class OAuthSessionServiceDelegate implements SessionServiceDelegate, Appl
         this.applicationContext=applicationContext;
     }
 
-    private OAuth2Cache cache(){
+    protected OAuth2Cache cache(){
         return applicationContext.getBean(OAuth2Cache.class);
     }
 
-    private OAuth2Configuration configuration(){
-        return applicationContext.getBean(OAuth2Configuration.class);
+    protected abstract OAuth2Configuration configuration();
+
+    protected OAuth2Configuration configuration(String configBeanName){
+        return (OAuth2Configuration) applicationContext.getBean(configBeanName);
     }
 
-    private class RefreshTokenRequestCallback implements RequestCallback {
+    protected class RefreshTokenRequestCallback implements RequestCallback {
 
         private final MultiValueMap<String, String> form;
 
@@ -226,14 +257,14 @@ public class OAuthSessionServiceDelegate implements SessionServiceDelegate, Appl
         }
     }
 
-    public HttpMessageConverterExtractor<OAuth2AccessToken> tokenExtractor(){
+    protected HttpMessageConverterExtractor<OAuth2AccessToken> tokenExtractor(){
         return new HttpMessageConverterExtractor<>(OAuth2AccessToken.class,restTemplate().getMessageConverters());
     }
 
 
 
 
-    private OAuth2RestTemplate restTemplate(){
+    protected OAuth2RestTemplate restTemplate(){
         return applicationContext.getBean(OAuth2RestTemplate.class);
     }
 }
