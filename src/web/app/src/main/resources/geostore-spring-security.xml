@@ -69,11 +69,15 @@
         <constructor-arg><value>http://localhopst:8080/geoserver/www/{token}.txt</value></constructor-arg>
     </bean-->
 
+	<security:authentication-manager>
+		<security:authentication-provider ref='geoStoreUserServiceAuthenticationProvider' />
+		<!-- security:authentication-provider ref='geostoreLdapProvider' / -->
+	</security:authentication-manager>
 
 
-    <security:authentication-manager>
+    <!--security:authentication-manager>
         <security:authentication-provider ref='preauthenticatedAuthenticationProvider' />
-    </security:authentication-manager>
+    </security:authentication-manager-->
     
     <bean id="preauthenticatedAuthenticationProvider" class="it.geosolutions.geostore.services.rest.security.PreAuthenticatedAuthenticationProvider">
     </bean>

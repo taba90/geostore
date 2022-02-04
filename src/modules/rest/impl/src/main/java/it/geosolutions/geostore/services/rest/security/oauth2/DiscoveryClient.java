@@ -15,6 +15,7 @@ public class DiscoveryClient {
     private static final String END_SESSION_ENDPONT = "end_session_endpoint";
     private static final String JWK_SET_URI_ATTR_NAME = "jwks_uri";
     private static final String SCOPES_SUPPORTED = "scopes_supported";
+    private static final String REVOCATION_ENDPOINT = "revocation_endpoint";
 
     private final RestTemplate restTemplate;
     private String location;
@@ -71,6 +72,9 @@ public class DiscoveryClient {
                             List<String> scopes = (List<String>) s;
                             conf.setScopes(collectScopes(scopes));
                         });
+        Optional.ofNullable(response.get(REVOCATION_ENDPOINT))
+                .ifPresent(
+                        s -> conf.setRevokeEndpoint((String) s));
     }
 
     private String collectScopes(List<String> scopes) {

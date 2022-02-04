@@ -47,6 +47,8 @@ public class OAuth2Configuration implements BeanNameAware {
 
     protected String internalRedirectUri;
 
+    protected String revokeEndpoint;
+
     public static final String CONFIGURATION_NAME="CONFIGURATION_NAME";
 
     public AuthenticationEntryPoint getAuthenticationEntryPoint() {
@@ -234,6 +236,14 @@ public class OAuth2Configuration implements BeanNameAware {
 
     public boolean isInvalid(){
         return clientId==null || clientSecret==null || authorizationUri==null || accessTokenUri==null;
+    }
+
+    public String getRevokeEndpoint() {
+        return revokeEndpoint;
+    }
+
+    public void setRevokeEndpoint(String revokeEndpoint) {
+        this.revokeEndpoint = revokeEndpoint;
     }
 
     @Override

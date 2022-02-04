@@ -9,6 +9,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.ClientHttpRequest;
 import org.springframework.http.converter.FormHttpMessageConverter;
@@ -67,7 +68,7 @@ public class OAuthSessionServiceDelegate implements SessionServiceDelegate, Appl
             form.add("client_secret", configuration.getClientSecret());
             RestTemplate restTemplate = new RestTemplate();
             HttpHeaders headers = new HttpHeaders();
-            OAuth2AccessToken newToken = restTemplate.execute(configuration.buildRefreshTokenURI("offline"), HttpMethod.POST, new RefreshTokenRequestCallback(form, headers), responseExtractor());
+            OAuth2AccessToken newToken = restTemplate.execute(configuration.buildRefreshTokenURI("offline"), HttpMethod.POST, new RefreshTokenRequestCallback(form, headers), tokenExtractor());
             if (newToken != null && newToken.getValue()!=null) {
                 String refreshed = newToken.getValue();
                 rebuildTokenAuth(accessToken, newToken, refreshToken);
@@ -147,6 +148,12 @@ public class OAuthSessionServiceDelegate implements SessionServiceDelegate, Appl
         cache.removeEntry(accessToken);
         OAuth2AccessToken token = restTemplate.getOAuth2ClientContext().getAccessToken();
         if (token != null) {
+            HttpHeaders headers = new HttpHeaders();
+            OAuth2Configuration configuration=configuration();
+            RestTemplate template=new RestTemplate();
+            if (configuration.getRevokeEndpoint()!=null){
+                //template.exchange(configuration.getRevokeEndpoint()+"?token="+token.getValue(),HttpMethod.POST,new RefreshTokenRequestCallback(new LinkedMultiValueMap<>(),headers));
+            }
             final AccessTokenRequest accessTokenRequest =
                     restTemplate.getOAuth2ClientContext().getAccessTokenRequest();
             if (accessTokenRequest != null && accessTokenRequest.getStateKey() != null) {
@@ -163,6 +170,10 @@ public class OAuthSessionServiceDelegate implements SessionServiceDelegate, Appl
             }
         }
         clearCookies(request,response);
+    }
+
+    private void revokeAuthorization(){
+
     }
 
     private void clearCookies(HttpServletRequest request, HttpServletResponse response){
@@ -215,9 +226,12 @@ public class OAuthSessionServiceDelegate implements SessionServiceDelegate, Appl
         }
     }
 
-    public HttpMessageConverterExtractor<OAuth2AccessToken> responseExtractor(){
+    public HttpMessageConverterExtractor<OAuth2AccessToken> tokenExtractor(){
         return new HttpMessageConverterExtractor<>(OAuth2AccessToken.class,restTemplate().getMessageConverters());
     }
+
+
+
 
     private OAuth2RestTemplate restTemplate(){
         return applicationContext.getBean(OAuth2RestTemplate.class);

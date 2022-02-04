@@ -85,7 +85,7 @@ public abstract class OpenIdGeoStoreAuthenticationFilter extends OAuth2ClientAut
 
     @Override
     public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain) throws IOException, ServletException {
-        if (!configuration.isInvalid())
+        if (!configuration.isInvalid() && SecurityContextHolder.getContext().getAuthentication()==null)
             super.doFilter(req, res, chain);
         chain.doFilter(req,res);
     }
@@ -93,7 +93,6 @@ public abstract class OpenIdGeoStoreAuthenticationFilter extends OAuth2ClientAut
     @Override
     public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException, IOException, ServletException {
         Authentication authentication=SecurityContextHolder.getContext().getAuthentication();
-        if (authentication==null) {
             String token = OAuthUtils.tokenFromParamsOrBearer(ACCESS_TOKEN_PARAM, request);
             if (token!=null) {
                 authentication = cache.get(token);
@@ -111,7 +110,6 @@ public abstract class OpenIdGeoStoreAuthenticationFilter extends OAuth2ClientAut
                 clearState();
                 authentication=authenticateAndUpdateCache(request,response,null,null);
             }
-        }
         return authentication;
     }
 
