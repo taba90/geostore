@@ -25,7 +25,7 @@
 		<security:csrf disabled="true"/>
 		<security:custom-filter ref="authenticationTokenProcessingFilter" before="FORM_LOGIN_FILTER"/>
 		<security:custom-filter ref="sessionTokenProcessingFilter" after="FORM_LOGIN_FILTER"/>
-		<security:custom-filter ref="googleOAuthFilter" before="CAS_FILTER"/>
+		<security:custom-filter ref="googleOAuthFilter" after="BASIC_AUTH_FILTER"/>
 		<security:anonymous />
 	</security:http>
 	<!-- Entry point -->
@@ -53,7 +53,17 @@
 	<bean class="it.geosolutions.geostore.services.rest.security.SessionTokenAuthenticationFilter"
         id="sessionTokenProcessingFilter">
 	</bean>
-	
+
+	<bean id="sessionServiceDelegateOAuth"
+		  class="it.geosolutions.geostore.services.rest.impl.SessionServiceDelegateImpl">
+		<constructor-arg ref="restSessionService"/>
+	</bean>
+
+	<bean id="oauth2SessionServiceDelegate"
+		  class="it.geosolutions.geostore.services.rest.security.oauth2.OAuthSessionServiceDelegate">
+		<constructor-arg ref="restSessionService"/>
+		<constructor-arg value="google"/>
+	</bean>
 	<!-- bean class="it.geosolutions.geostore.services.rest.security.WebServiceTokenAuthenticationFilter"
         id="authenticationTokenProcessingFilter">
         <constructor-arg><value>http://localhopst:8080/geoserver/www/{token}.txt</value></constructor-arg>

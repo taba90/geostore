@@ -15,6 +15,8 @@ import org.springframework.security.oauth2.client.resource.OAuth2ProtectedResour
 import org.springframework.security.oauth2.client.token.grant.code.AuthorizationCodeResourceDetails;
 import org.springframework.security.oauth2.config.annotation.web.configuration.EnableOAuth2Client;
 
+import static it.geosolutions.geostore.services.rest.security.oauth2.OAuth2Configuration.OAUTH2CONFIG;
+
 @Configuration
 @EnableOAuth2Client
 public class OAuthGoogleSecurityConfiguration  extends OAuthGeoStoreSecurityConfiguration {

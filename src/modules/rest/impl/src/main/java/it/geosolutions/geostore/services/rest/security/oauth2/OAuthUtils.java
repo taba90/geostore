@@ -61,11 +61,17 @@ public class OAuthUtils {
     }
 
     static String getAccessToken(){
-        return getToken(ACCESS_TOKEN_PARAM);
+        String token= getToken(ACCESS_TOKEN_PARAM);
+        if (token==null) token=tokenFromParamsOrBearer(ACCESS_TOKEN_PARAM,getRequest());
+        return token;
     }
 
     static String getRefreshAccessToken(){
-        return getToken(REFRESH_TOKEN_PARAM);
+        String refreshToken=getToken(REFRESH_TOKEN_PARAM);
+        if (refreshToken==null)
+            refreshToken=getParameterValue(REFRESH_TOKEN_PARAM,getRequest());
+        return refreshToken;
+
     }
 
     static TokenDetails getTokenDetails(Authentication authentication){

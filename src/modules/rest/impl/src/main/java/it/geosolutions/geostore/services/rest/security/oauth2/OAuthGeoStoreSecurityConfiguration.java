@@ -32,7 +32,6 @@ import java.util.List;
 
 public abstract class OAuthGeoStoreSecurityConfiguration implements ApplicationContextAware {
 
-    public static final String OAUTH2CONFIG="OAuth2Config";
     static final String DETAILS_ID="oauth2-client";
 
     protected ApplicationContext context;

@@ -47,7 +47,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
-import static it.geosolutions.geostore.services.rest.security.oauth2.OAuthGeoStoreSecurityConfiguration.OAUTH2CONFIG;
+import static it.geosolutions.geostore.services.rest.security.oauth2.OAuth2Configuration.OAUTH2CONFIG;
 import static it.geosolutions.geostore.services.rest.security.oauth2.OAuthUtils.ACCESS_TOKEN_PARAM;
 import static it.geosolutions.geostore.services.rest.security.oauth2.OAuthUtils.REFRESH_TOKEN_PARAM;
 import static it.geosolutions.geostore.services.rest.security.oauth2.OAuthUtils.getAccessToken;

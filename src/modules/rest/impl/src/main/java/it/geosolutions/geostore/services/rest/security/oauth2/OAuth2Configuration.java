@@ -1,5 +1,6 @@
 package it.geosolutions.geostore.services.rest.security.oauth2;
 
+import org.springframework.beans.factory.BeanNameAware;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 
@@ -7,7 +8,12 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
-public class OAuth2Configuration {
+public class OAuth2Configuration implements BeanNameAware {
+
+    public static final String OAUTH2CONFIG="OAuth2Config";
+
+
+    private String beanName;
 
     protected String clientId;
 
@@ -41,6 +47,7 @@ public class OAuth2Configuration {
 
     protected String internalRedirectUri;
 
+    public static final String CONFIGURATION_NAME="CONFIGURATION_NAME";
 
     public AuthenticationEntryPoint getAuthenticationEntryPoint() {
         return new AuthenticationEntryPoint() {
@@ -223,5 +230,22 @@ public class OAuth2Configuration {
 
     public void setInternalRedirectUri(String internalRedirectUri) {
         this.internalRedirectUri = internalRedirectUri;
+    }
+
+    public boolean isInvalid(){
+        return clientId==null || clientSecret==null || authorizationUri==null || accessTokenUri==null;
+    }
+
+    @Override
+    public void setBeanName(String name) {
+        this.beanName=name;
+    }
+
+    public String getBeanName() {
+        return beanName;
+    }
+
+    public String getProvider(){
+        return beanName.replaceAll(OAUTH2CONFIG,"");
     }
 }

@@ -1,6 +1,7 @@
 package it.geosolutions.geostore.services.rest.security.oauth2;
 
 import it.geosolutions.geostore.core.model.User;
+import it.geosolutions.geostore.core.model.UserAttribute;
 import it.geosolutions.geostore.core.model.UserGroup;
 import it.geosolutions.geostore.core.model.enums.GroupReservedNames;
 import it.geosolutions.geostore.core.model.enums.Role;
@@ -50,6 +51,7 @@ import java.util.stream.Stream;
 
 import static com.google.common.collect.Lists.newArrayList;
 import static it.geosolutions.geostore.core.security.password.SecurityUtils.getUsername;
+import static it.geosolutions.geostore.services.rest.SessionServiceDelegate.PROVIDER_KEY;
 import static it.geosolutions.geostore.services.rest.security.oauth2.OAuthUtils.ACCESS_TOKEN_PARAM;
 import static it.geosolutions.geostore.services.rest.security.oauth2.OAuthUtils.REFRESH_TOKEN_PARAM;
 
@@ -83,14 +85,15 @@ public abstract class OpenIdGeoStoreAuthenticationFilter extends OAuth2ClientAut
 
     @Override
     public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain) throws IOException, ServletException {
-        super.doFilter(req, res, chain);
+        if (!configuration.isInvalid())
+            super.doFilter(req, res, chain);
         chain.doFilter(req,res);
     }
 
     @Override
     public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException, IOException, ServletException {
         Authentication authentication=SecurityContextHolder.getContext().getAuthentication();
-        if (authentication==null || !(authentication instanceof PreAuthenticatedAuthenticationToken)) {
+        if (authentication==null) {
             String token = OAuthUtils.tokenFromParamsOrBearer(ACCESS_TOKEN_PARAM, request);
             if (token!=null) {
                 authentication = cache.get(token);
@@ -308,11 +311,6 @@ public abstract class OpenIdGeoStoreAuthenticationFilter extends OAuth2ClientAut
         String idToken=OAuthUtils.getIdToken();
         OAuth2AccessToken accessToken=restTemplate.getOAuth2ClientContext().getAccessToken();
         authenticationToken.setDetails(new TokenDetails(accessToken,idToken));
-        if (accessToken!=null) {
-            request.setAttribute(ACCESS_TOKEN_PARAM, accessToken.getValue());
-            if (accessToken.getRefreshToken()!=null)
-                request.setAttribute(REFRESH_TOKEN_PARAM,accessToken.getRefreshToken().getValue());
-        }
         return authenticationToken;
     }
 
@@ -341,7 +339,10 @@ public abstract class OpenIdGeoStoreAuthenticationFilter extends OAuth2ClientAut
         user.setName(userName);
         user.setNewPassword(credentials);
         user.setEnabled(true);
-
+        UserAttribute userAttribute= new UserAttribute();
+        userAttribute.setName(OAuth2Configuration.CONFIGURATION_NAME);
+        userAttribute.setValue(configuration.getBeanName());
+        user.setAttribute(Arrays.asList(userAttribute));
         Role role = Role.USER;
         user.setRole(role);
         Set<UserGroup> groups=new HashSet<UserGroup>();
@@ -370,6 +371,14 @@ public abstract class OpenIdGeoStoreAuthenticationFilter extends OAuth2ClientAut
         }
 
         SecurityContextHolder.getContext().setAuthentication(authResult);
+        TokenDetails tokenDetails=tokenDetails(authResult);
+        if (tokenDetails!=null && tokenDetails.getAccessToken() !=null){
+            OAuth2AccessToken accessToken=tokenDetails.getAccessToken();
+            request.setAttribute(ACCESS_TOKEN_PARAM, accessToken.getValue());
+            if (accessToken.getRefreshToken()!=null)
+                request.setAttribute(REFRESH_TOKEN_PARAM,accessToken.getRefreshToken().getValue());
+        }
+        request.setAttribute(PROVIDER_KEY,configuration.getProvider());
     }
 
     @Override
