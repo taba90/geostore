@@ -11,13 +11,17 @@ import org.springframework.security.oauth2.client.resource.OAuth2ProtectedResour
 import org.springframework.security.oauth2.client.token.grant.code.AuthorizationCodeResourceDetails;
 import org.springframework.security.oauth2.config.annotation.web.configuration.EnableOAuth2Client;
 
-import static it.geosolutions.geostore.services.rest.security.oauth2.OAuth2Configuration.OAUTH2CONFIG;
+import static it.geosolutions.geostore.services.rest.security.oauth2.OAuth2Configuration.CONFIG_NAME_SUFFIX;
 
+/**
+ * Configuration class for OAuth2 Google client.
+ */
 @Configuration
 @EnableOAuth2Client
-public class OAuthGoogleSecurityConfiguration  extends OAuthGeoStoreSecurityConfiguration {
+public class OAuthGoogleSecurityConfiguration extends OAuthGeoStoreSecurityConfiguration {
 
-    static final String CONF_BEAN_NAME="google"+OAUTH2CONFIG;
+    static final String CONF_BEAN_NAME = "google" + CONFIG_NAME_SUFFIX;
+
     @Override
     public OAuth2ProtectedResourceDetails resourceDetails() {
         AuthorizationCodeResourceDetails details =
@@ -27,11 +31,13 @@ public class OAuthGoogleSecurityConfiguration  extends OAuthGeoStoreSecurityConf
     }
 
     @Bean(value = CONF_BEAN_NAME)
-    public OAuth2Configuration configuration(){
+    public OAuth2Configuration configuration() {
         return new OAuth2Configuration();
     }
 
-    /** Must have "session" scope */
+    /**
+     * Must have "session" scope
+     */
     @Override
     @Bean(value = "googleOpenIdRestTemplate")
     @Scope(value = "session", proxyMode = ScopedProxyMode.TARGET_CLASS)

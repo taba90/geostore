@@ -15,6 +15,9 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * Google AccessTokenConverter. Retrieves Authentication information from the AccessToken.
+ */
 public class GoogleAccessTokenConverter extends DefaultAccessTokenConverter {
 
     private UserAuthenticationConverter userTokenConverter;
@@ -53,6 +56,7 @@ public class GoogleAccessTokenConverter extends DefaultAccessTokenConverter {
                         parameters, clientId, null, true, scope, resourceIds, null, null, null);
         return new OAuth2Authentication(request, user);
     }
+
 
     private Set<String> parseScopes(Map<String, ?> map) {
         // Parsing of scopes coming back from Google are slightly different from

@@ -54,7 +54,7 @@
         id="sessionTokenProcessingFilter">
 	</bean>
 
-	<bean id="sessionServiceDelegateOAuth"
+	<bean id="sessionServiceDelegate"
 		  class="it.geosolutions.geostore.services.rest.impl.SessionServiceDelegateImpl">
 		<constructor-arg ref="restSessionService"/>
 	</bean>

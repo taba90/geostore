@@ -1,16 +1,17 @@
 package it.geosolutions.geostore.services.rest.security.oauth2;
 
 import org.springframework.beans.factory.BeanNameAware;
-import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
-
+/**
+ * This class represent the geostore configuration for an OAuth2 provider.
+ * An OAuth2Configuration bean should be provided for each OAuth2 provider. The bean id has to be
+ * {providerName}OAuth2Config.
+ */
 public class OAuth2Configuration implements BeanNameAware {
 
-    public static final String OAUTH2CONFIG="OAuth2Config";
+    // the suffix that should be shared by all the bean of this type in their id.
+    public static final String CONFIG_NAME_SUFFIX = "OAuth2Config";
 
 
     private String beanName;
@@ -39,7 +40,7 @@ public class OAuth2Configuration implements BeanNameAware {
 
     protected String logoutEndpoint;
 
-    protected Boolean autoCreateUser=false;
+    protected Boolean autoCreateUser = false;
 
     protected String idTokenUri;
 
@@ -49,31 +50,27 @@ public class OAuth2Configuration implements BeanNameAware {
 
     protected String revokeEndpoint;
 
-    public static final String CONFIGURATION_NAME="CONFIGURATION_NAME";
+    public static final String CONFIGURATION_NAME = "CONFIGURATION_NAME";
 
     public AuthenticationEntryPoint getAuthenticationEntryPoint() {
-        return new AuthenticationEntryPoint() {
-            public void commence(
-                    HttpServletRequest request,
-                    HttpServletResponse response,
-                    AuthenticationException authException)
-                    throws IOException {
-                String loginUri= buildLoginUri();
-                if (getEnableRedirectEntryPoint()
-                        || request.getRequestURI().endsWith(getAuthorizationUri())) {
-                    response.sendRedirect(loginUri);
-                }
+        return (request, response, authException) -> {
+            String loginUri = buildLoginUri();
+            if (getEnableRedirectEntryPoint()
+                    || request.getRequestURI().endsWith(getAuthorizationUri())) {
+                response.sendRedirect(loginUri);
             }
         };
     }
 
-    public String buildLoginUri(){
-        return buildLoginUri("online",new String[]{});
+    public String buildLoginUri() {
+        return buildLoginUri("online", new String[]{});
     }
+
     public String buildLoginUri(String accessType) {
-        return buildLoginUri(accessType,new String[]{});
+        return buildLoginUri(accessType, new String[]{});
     }
-    public String buildLoginUri(String accessType,String... additionalScopes){
+
+    public String buildLoginUri(String accessType, String... additionalScopes) {
         final StringBuilder loginUri = new StringBuilder(getAuthorizationUri());
         loginUri.append("?")
                 .append("response_type=code")
@@ -83,7 +80,7 @@ public class OAuth2Configuration implements BeanNameAware {
                 .append("&")
                 .append("scope=")
                 .append(getScopes().replace(",", "%20"));
-        for (String s:additionalScopes){
+        for (String s : additionalScopes) {
             loginUri.append("%20").append(s);
         }
         loginUri.append("&")
@@ -93,7 +90,7 @@ public class OAuth2Configuration implements BeanNameAware {
         return loginUri.toString();
     }
 
-    public String buildRefreshTokenURI(String accessType){
+    public String buildRefreshTokenURI(String accessType) {
         final StringBuilder refreshUri = new StringBuilder(getAccessTokenUri());
         refreshUri.append("?")
                 .append("&")
@@ -234,8 +231,8 @@ public class OAuth2Configuration implements BeanNameAware {
         this.internalRedirectUri = internalRedirectUri;
     }
 
-    public boolean isInvalid(){
-        return clientId==null || clientSecret==null || authorizationUri==null || accessTokenUri==null;
+    public boolean isInvalid() {
+        return clientId == null || clientSecret == null || authorizationUri == null || accessTokenUri == null;
     }
 
     public String getRevokeEndpoint() {
@@ -248,14 +245,14 @@ public class OAuth2Configuration implements BeanNameAware {
 
     @Override
     public void setBeanName(String name) {
-        this.beanName=name;
+        this.beanName = name;
     }
 
     public String getBeanName() {
         return beanName;
     }
 
-    public String getProvider(){
-        return beanName.replaceAll(OAUTH2CONFIG,"");
+    public String getProvider() {
+        return beanName.replaceAll(CONFIG_NAME_SUFFIX, "");
     }
 }

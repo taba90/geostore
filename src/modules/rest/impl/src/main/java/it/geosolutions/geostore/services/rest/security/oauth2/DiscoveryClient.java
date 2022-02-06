@@ -7,6 +7,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+/**
+ * DiscoveryClient to perform a discovery request and set the value to the OAuth2Configuration instance.
+ */
 public class DiscoveryClient {
     private static final String PROVIDER_END_PATH = "/.well-known/openid-configuration";
     private static final String AUTHORIZATION_ENDPOINT_ATTR_NAME = "authorization_endpoint";
@@ -36,7 +39,8 @@ public class DiscoveryClient {
         }
         this.location = location;
     }
-    public static String appendPath(String... pathComponents) {
+
+    private static String appendPath(String... pathComponents) {
         StringBuilder result = new StringBuilder(pathComponents[0]);
         for (int i = 1; i < pathComponents.length; i++) {
             String component = pathComponents[i];
@@ -53,6 +57,11 @@ public class DiscoveryClient {
         return result.toString();
     }
 
+    /**
+     * Fill the OAuth2Configuration instance with the values found in the discovery response.
+     *
+     * @param conf the OAuth2Configuration.
+     */
     public void autofill(OAuth2Configuration conf) {
         Map response = restTemplate.getForObject(this.location, Map.class);
         Optional.ofNullable(response.get(getAuthorizationEndpointAttrName()))

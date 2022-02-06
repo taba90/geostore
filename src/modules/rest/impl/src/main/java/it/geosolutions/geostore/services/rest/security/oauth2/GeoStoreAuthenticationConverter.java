@@ -6,15 +6,22 @@ import org.springframework.security.oauth2.provider.token.DefaultUserAuthenticat
 
 import java.util.Map;
 
+/**
+ * GeoStore specific AuthenticationConverter.
+ */
 public class GeoStoreAuthenticationConverter extends DefaultUserAuthenticationConverter {
     private Object usernameKey = USERNAME;
 
-    /** Default Constructor. */
+    /**
+     * Default Constructor.
+     */
     public GeoStoreAuthenticationConverter() {
         super();
     }
 
-    /** Default Constructor. */
+    /**
+     * Default Constructor.
+     */
     public GeoStoreAuthenticationConverter(final String username_key) {
         super();
 

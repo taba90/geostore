@@ -10,22 +10,42 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.util.Enumeration;
 
+/**
+ * A class that groups some constants and utility methods used to handle OAuth2 related tasks.
+ * Provides functionality like retrieving tokens from the request, or retrieving
+ * the {@link TokenDetails} from an Authentication instance.
+ */
 public class OAuthUtils {
 
-    public static final String ID_TOKEN_PARAM ="id_token";
+    public static final String ID_TOKEN_PARAM = "id_token";
 
-    public static final String ACCESS_TOKEN_PARAM ="access_token";
+    public static final String ACCESS_TOKEN_PARAM = "access_token";
 
-    public static final String REFRESH_TOKEN_PARAM ="refresh_token";
+    public static final String REFRESH_TOKEN_PARAM = "refresh_token";
 
 
-    public static String tokenFromParamsOrBearer(String paramName, HttpServletRequest request){
-        String token =getParameterValue(paramName,request);
-        if (token ==null){
-            token=getBearerToken(request);
+    /**
+     * Retrieve a token either from a request param or from the Bearer.
+     *
+     * @param paramName the name of the request param.
+     * @param request   the request.
+     * @return the token if found, null otherwise.
+     */
+    public static String tokenFromParamsOrBearer(String paramName, HttpServletRequest request) {
+        String token = getParameterValue(paramName, request);
+        if (token == null) {
+            token = getBearerToken(request);
         }
         return token;
     }
+
+    /**
+     * Retrieve a value  from a request param.
+     *
+     * @param paramName the name of the request param.
+     * @param request   the request.
+     * @return the value if found, null otherwise.
+     */
     public static String getParameterValue(String paramName, HttpServletRequest request) {
         for (Enumeration<String> iterator = request.getParameterNames();
              iterator.hasMoreElements(); ) {
@@ -38,6 +58,12 @@ public class OAuthUtils {
         return null;
     }
 
+    /**
+     * Get the bearer token from the header.
+     *
+     * @param request the request.
+     * @return the token if found null otherwise.
+     */
     public static String getBearerToken(HttpServletRequest request) {
         Authentication auth = new BearerTokenExtractor().extract(request);
         if (auth != null) return SecurityUtils.getUsername(auth.getPrincipal());
@@ -45,48 +71,85 @@ public class OAuthUtils {
         return null;
     }
 
-    public static String getToken(String name){
-        String token= (String) RequestContextHolder.getRequestAttributes().getAttribute(name,0);
-        if (token==null)
-            token=(String) RequestContextHolder.getRequestAttributes().getAttribute(name,1);
+    /**
+     * Get a request attribute using first a request scope then the session scope.
+     *
+     * @param name the name of the attribute.
+     * @return the token attribute value if found.
+     */
+    public static String getRequestAttribute(String name) {
+        String token = (String) RequestContextHolder.getRequestAttributes().getAttribute(name, 0);
+        if (token == null)
+            token = (String) RequestContextHolder.getRequestAttributes().getAttribute(name, 1);
         return token;
     }
 
-    static String getIdToken(){
-        return getToken(GeoStoreOAuthRestTemplate.ID_TOKEN_VALUE);
+    /**
+     * Get the id token from the request attributes.
+     *
+     * @return the id token value if found, null otherwise.
+     */
+    public static String getIdToken() {
+        return getRequestAttribute(GeoStoreOAuthRestTemplate.ID_TOKEN_VALUE);
     }
 
-    static String getAccessToken(){
-        String token= getToken(ACCESS_TOKEN_PARAM);
-        if (token==null) token=tokenFromParamsOrBearer(ACCESS_TOKEN_PARAM,getRequest());
+    /**
+     * Get the Access Token from the request attributes if present.
+     *
+     * @return the access token if found, null otherwise.
+     */
+    public static String getAccessToken() {
+        String token = getRequestAttribute(ACCESS_TOKEN_PARAM);
+        if (token == null) token = tokenFromParamsOrBearer(ACCESS_TOKEN_PARAM, getRequest());
         return token;
     }
 
-    static String getRefreshAccessToken(){
-        String refreshToken=getToken(REFRESH_TOKEN_PARAM);
-        if (refreshToken==null)
-            refreshToken=getParameterValue(REFRESH_TOKEN_PARAM,getRequest());
+    /**
+     * Get the Refresh Toke from request attributes if present.
+     *
+     * @return the refresh token if found, null otherwise.
+     */
+    public static String getRefreshAccessToken() {
+        String refreshToken = getRequestAttribute(REFRESH_TOKEN_PARAM);
+        if (refreshToken == null)
+            refreshToken = getParameterValue(REFRESH_TOKEN_PARAM, getRequest());
         return refreshToken;
 
     }
 
-    static TokenDetails getTokenDetails(Authentication authentication){
-            TokenDetails tokenDetails=null;
-            if (authentication!=null) {
-                Object details = authentication.getDetails();
-                if (details instanceof TokenDetails) {
-                    tokenDetails = ((TokenDetails) details);
-                }
+    /**
+     * Return the {@link TokenDetails} stored in the Authentication instance.
+     *
+     * @param authentication the authentication eventually holding the TokenDetails.
+     * @return the token details if found. Null otherwise.
+     */
+    public static TokenDetails getTokenDetails(Authentication authentication) {
+        TokenDetails tokenDetails = null;
+        if (authentication != null) {
+            Object details = authentication.getDetails();
+            if (details instanceof TokenDetails) {
+                tokenDetails = ((TokenDetails) details);
             }
-            return tokenDetails;
+        }
+        return tokenDetails;
     }
 
-    static HttpServletRequest getRequest() {
+    /**
+     * Get the HttpServletRequest from the RequestContext.
+     *
+     * @return the current HttpServletRequest.
+     */
+    public static HttpServletRequest getRequest() {
         return ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes())
                 .getRequest();
     }
 
-    static HttpServletResponse getResponse(){
+    /**
+     * Get the HttpServletResponse from the RequestContext.
+     *
+     * @return the current HttpServletResponse.
+     */
+    public static HttpServletResponse getResponse() {
         return ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes())
                 .getResponse();
     }

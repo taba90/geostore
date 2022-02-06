@@ -25,9 +25,12 @@ import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.List;
 
+/**
+ * Base abstract class for @Configuration classes providing needed beans from the Spring OAuth2 mechanism.
+ */
 public abstract class OAuthGeoStoreSecurityConfiguration implements ApplicationContextAware {
 
-    static final String DETAILS_ID="oauth2-client";
+    static final String DETAILS_ID = "oauth2-client";
 
     protected ApplicationContext context;
 
@@ -55,7 +58,7 @@ public abstract class OAuthGeoStoreSecurityConfiguration implements ApplicationC
     }
 
 
-    protected OAuth2ProtectedResourceDetails resourceDetails(){
+    protected OAuth2ProtectedResourceDetails resourceDetails() {
         AuthorizationCodeResourceDetails details = new AuthorizationCodeResourceDetails();
         details.setId(getDetailsId());
 
@@ -66,10 +69,12 @@ public abstract class OAuthGeoStoreSecurityConfiguration implements ApplicationC
         return details;
     }
 
-    protected String getDetailsId(){return DETAILS_ID;}
+    protected String getDetailsId() {
+        return DETAILS_ID;
+    }
 
     protected GeoStoreOAuthRestTemplate restTemplate() {
-        return new GeoStoreOAuthRestTemplate(resourceDetails(),new DefaultOAuth2ClientContext(getAccessTokenRequest()),getOAuthAppConfiguration());
+        return new GeoStoreOAuthRestTemplate(resourceDetails(), new DefaultOAuth2ClientContext(getAccessTokenRequest()), getOAuthAppConfiguration());
     }
 
     public GeoStoreOAuthRestTemplate getConfiguredRestTemplate() {
@@ -92,28 +97,28 @@ public abstract class OAuthGeoStoreSecurityConfiguration implements ApplicationC
         return oAuth2RestTemplate;
     }
 
-    private void setJacksonConverter(OAuth2RestTemplate oAuth2RestTemplate){
-        List<HttpMessageConverter<?>> converterList=oAuth2RestTemplate.getMessageConverters();
-        MappingJackson2HttpMessageConverter jacksonConverter=null;
-        for (HttpMessageConverter<?> converter:converterList){
+    private void setJacksonConverter(OAuth2RestTemplate oAuth2RestTemplate) {
+        List<HttpMessageConverter<?>> converterList = oAuth2RestTemplate.getMessageConverters();
+        MappingJackson2HttpMessageConverter jacksonConverter = null;
+        for (HttpMessageConverter<?> converter : converterList) {
             if (converter instanceof MappingJackson2HttpMessageConverter) {
                 jacksonConverter = (MappingJackson2HttpMessageConverter) converter;
                 break;
             }
         }
-        if (jacksonConverter==null) {
+        if (jacksonConverter == null) {
             jacksonConverter = new MappingJackson2HttpMessageConverter();
             oAuth2RestTemplate.getMessageConverters().add(jacksonConverter);
         }
         jacksonConverter.setSupportedMediaTypes(Arrays.asList(new MediaType("application", "json", Charset.forName("UTF-8"))));
     }
 
-    protected OAuth2Configuration getOAuthAppConfiguration(){
+    protected OAuth2Configuration getOAuthAppConfiguration() {
         return context.getBean(OAuth2Configuration.class);
     }
 
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        this.context=applicationContext;
+        this.context = applicationContext;
     }
 }

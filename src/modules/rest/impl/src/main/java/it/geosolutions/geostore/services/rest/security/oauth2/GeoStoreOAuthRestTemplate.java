@@ -12,6 +12,8 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.util.Optional;
 
+import static it.geosolutions.geostore.services.rest.security.oauth2.OAuthUtils.ID_TOKEN_PARAM;
+
 public class GeoStoreOAuthRestTemplate extends OAuth2RestTemplate {
 
     private JwkTokenStore store;
@@ -23,15 +25,15 @@ public class GeoStoreOAuthRestTemplate extends OAuth2RestTemplate {
 
 
     public GeoStoreOAuthRestTemplate(
-            OAuth2ProtectedResourceDetails resource, OAuth2ClientContext context,OAuth2Configuration configuration) {
-        this(resource,context,configuration,"id_token");
+            OAuth2ProtectedResourceDetails resource, OAuth2ClientContext context, OAuth2Configuration configuration) {
+        this(resource, context, configuration, ID_TOKEN_PARAM);
     }
 
     public GeoStoreOAuthRestTemplate(
-            OAuth2ProtectedResourceDetails resource, OAuth2ClientContext context,OAuth2Configuration configuration,String idTokenParam) {
+            OAuth2ProtectedResourceDetails resource, OAuth2ClientContext context, OAuth2Configuration configuration, String idTokenParam) {
         super(resource, context);
-        this.store=new JwkTokenStore(configuration.getIdTokenUri());
-        this.idTokenParam=idTokenParam;
+        this.store = new JwkTokenStore(configuration.getIdTokenUri());
+        this.idTokenParam = idTokenParam;
     }
 
     @Override
@@ -59,7 +61,7 @@ public class GeoStoreOAuthRestTemplate extends OAuth2RestTemplate {
                 .ifPresent(r -> r.setAttribute(key, value));
     }
 
-    public OAuth2Authentication readAuthentication(String idToken){
+    public OAuth2Authentication readAuthentication(String idToken) {
         return store.readAuthentication(idToken);
     }
 }

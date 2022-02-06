@@ -53,6 +53,9 @@ import static it.geosolutions.geostore.services.rest.SessionServiceDelegate.PROV
 import static it.geosolutions.geostore.services.rest.security.oauth2.OAuthUtils.ACCESS_TOKEN_PARAM;
 import static it.geosolutions.geostore.services.rest.security.oauth2.OAuthUtils.REFRESH_TOKEN_PARAM;
 
+/**
+ * Base filter class for an OAuth2 authentication filter. Authentication instances are cached.
+ */
 public abstract class OAuthGeoStoreAuthenticationFilter extends OAuth2ClientAuthenticationProcessingFilter {
 
     private final static Logger LOGGER = Logger.getLogger(OAuthGeoStoreAuthenticationFilter.class);
@@ -70,74 +73,81 @@ public abstract class OAuthGeoStoreAuthenticationFilter extends OAuth2ClientAuth
     private OAuth2Cache cache;
 
 
-
-    public OAuthGeoStoreAuthenticationFilter(RemoteTokenServices tokenServices, GeoStoreOAuthRestTemplate oAuth2RestOperations, OAuth2Configuration configuration, OAuth2Cache oAuth2Cache){
+    /**
+     * @param tokenServices      a RemoteTokenServices instance.
+     * @param oAuth2RestTemplate the rest template to use for OAuth2 requests.
+     * @param configuration      the OAuth2 configuration.
+     * @param oAuth2Cache        the cache.
+     */
+    public OAuthGeoStoreAuthenticationFilter(RemoteTokenServices tokenServices, GeoStoreOAuthRestTemplate oAuth2RestTemplate, OAuth2Configuration configuration, OAuth2Cache oAuth2Cache) {
         super("/**");
         super.setTokenServices(tokenServices);
-        this.tokenServices=tokenServices;
-        super.restTemplate =oAuth2RestOperations;
-        this.configuration=configuration;
-        this.authEntryPoint=configuration.getAuthenticationEntryPoint();
-        this.cache=oAuth2Cache;
+        this.tokenServices = tokenServices;
+        super.restTemplate = oAuth2RestTemplate;
+        this.configuration = configuration;
+        this.authEntryPoint = configuration.getAuthenticationEntryPoint();
+        this.cache = oAuth2Cache;
     }
 
     @Override
     public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain) throws IOException, ServletException {
-        Authentication authentication=SecurityContextHolder.getContext().getAuthentication();
-        if (!configuration.isInvalid() && authentication==null)
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        // do we need to authenticate?
+        if (!configuration.isInvalid() && authentication == null)
             super.doFilter(req, res, chain);
+            // ok no need to authenticate but in case the security context
+            // holds a Token authentication we the the access token to request's attributes.
         else if (req instanceof HttpServletRequest)
-            addRequestAttributes((HttpServletRequest)req,authentication);
-        chain.doFilter(req,res);
+            addRequestAttributes((HttpServletRequest) req, authentication);
+        chain.doFilter(req, res);
     }
 
     @Override
     public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException, IOException, ServletException {
         Authentication authentication;
-            String token = OAuthUtils.tokenFromParamsOrBearer(ACCESS_TOKEN_PARAM, request);
-            if (token!=null) {
-                authentication = cache.get(token);
-                if (authentication==null) {
-                    authentication=authenticateAndUpdateCache(request,response,token,new DefaultOAuth2AccessToken(token));
-                } else {
-                    TokenDetails details = tokenDetails(authentication);
-                    if (details!=null) {
-                        OAuth2AccessToken accessToken = details.getAccessToken();
-                        if (accessToken.isExpired())
-                            authentication = authenticateAndUpdateCache(request, response, token, accessToken);
-                    }
-                }
+        String token = OAuthUtils.tokenFromParamsOrBearer(ACCESS_TOKEN_PARAM, request);
+        if (token != null) {
+            authentication = cache.get(token);
+            if (authentication == null) {
+                authentication = authenticateAndUpdateCache(request, response, token, new DefaultOAuth2AccessToken(token));
             } else {
-                clearState();
-                authentication=authenticateAndUpdateCache(request,response,null,null);
+                TokenDetails details = tokenDetails(authentication);
+                if (details != null) {
+                    OAuth2AccessToken accessToken = details.getAccessToken();
+                    if (accessToken.isExpired())
+                        authentication = authenticateAndUpdateCache(request, response, token, accessToken);
+                }
             }
+        } else {
+            clearState();
+            authentication = authenticateAndUpdateCache(request, response, null, null);
+        }
         return authentication;
     }
 
-    private TokenDetails tokenDetails(Authentication authentication){
-        TokenDetails tokenDetails=null;
-        Object details=authentication.getDetails();
-        if (details instanceof TokenDetails){
-            tokenDetails=((TokenDetails)details);
+    private TokenDetails tokenDetails(Authentication authentication) {
+        TokenDetails tokenDetails = null;
+        Object details = authentication.getDetails();
+        if (details instanceof TokenDetails) {
+            tokenDetails = ((TokenDetails) details);
         }
         return tokenDetails;
     }
 
 
-
-    private Authentication authenticateAndUpdateCache(HttpServletRequest request, HttpServletResponse response, String token, OAuth2AccessToken accessToken){
-        Authentication authentication=performOAuthAuthentication(request,response,accessToken);
-        if (authentication!=null) {
+    private Authentication authenticateAndUpdateCache(HttpServletRequest request, HttpServletResponse response, String token, OAuth2AccessToken accessToken) {
+        Authentication authentication = performOAuthAuthentication(request, response, accessToken);
+        if (authentication != null) {
             TokenDetails tokenDetails = tokenDetails(authentication);
             if (tokenDetails != null) {
                 token = tokenDetails.getAccessToken().getValue();
             }
-            cache.putCacheEntry(token,authentication);
+            cache.putCacheEntry(token, authentication);
         }
         return authentication;
     }
 
-    private void clearState(){
+    private void clearState() {
         OAuth2ClientContext clientContext = restTemplate.getOAuth2ClientContext();
         final AccessTokenRequest accessTokenRequest =
                 clientContext.getAccessTokenRequest();
@@ -152,8 +162,8 @@ public abstract class OAuthGeoStoreAuthenticationFilter extends OAuth2ClientAuth
             SecurityContextHolder.clearContext();
             HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes())
                     .getRequest();
-            HttpSession session=request.getSession(false);
-            if (session!=null)
+            HttpSession session = request.getSession(false);
+            if (session != null)
                 session.invalidate();
             LOGGER.debug("Cleaned out Session Access Token Request!");
         }
@@ -200,15 +210,15 @@ public abstract class OAuthGeoStoreAuthenticationFilter extends OAuth2ClientAuth
 
         // Validating the access_token
         Authentication authentication = null;
-        StatusResponseWrapper respWrap=new StatusResponseWrapper(resp);
+        StatusResponseWrapper respWrap = new StatusResponseWrapper(resp);
         try {
             authentication = super.attemptAuthentication(req, respWrap);
-            if (authentication!=null && LOGGER.isDebugEnabled())
+            if (authentication != null && LOGGER.isDebugEnabled())
                 LOGGER.debug(
-                    "Authenticated OAuth request for principal "+
-                    authentication.getPrincipal());
+                        "Authenticated OAuth request for principal " +
+                                authentication.getPrincipal());
         } catch (Exception e) {
-            handleOAuthException(e,req,respWrap);
+            handleOAuthException(e, req, respWrap);
         }
 
         String username =
@@ -221,7 +231,7 @@ public abstract class OAuthGeoStoreAuthenticationFilter extends OAuth2ClientAuth
 
     private void handleOAuthException(Exception e, HttpServletRequest req, StatusResponseWrapper resp) throws IOException, ServletException {
         if (e instanceof UserRedirectRequiredException && configuration.getEnableRedirectEntryPoint()) {
-            handleUserRedirection(req,resp);
+            handleUserRedirection(req, resp);
         } else if (e instanceof BadCredentialsException
                 || e instanceof ResourceAccessException) {
             if (e.getCause() instanceof OAuth2AccessDeniedException) {
@@ -256,9 +266,9 @@ public abstract class OAuthGeoStoreAuthenticationFilter extends OAuth2ClientAuth
                         restTemplate.getOAuth2ClientContext().getAccessTokenRequest();
                 if (accessTokenRequest.getPreservedState() != null
                         && accessTokenRequest.getStateKey() != null) {
-                   accessTokenRequest.remove("state");
-                   accessTokenRequest.remove(accessTokenRequest.getStateKey());
-                   accessTokenRequest.setPreservedState(null);
+                    accessTokenRequest.remove("state");
+                    accessTokenRequest.remove(accessTokenRequest.getStateKey());
+                    accessTokenRequest.setPreservedState(null);
                 }
             }
         }
@@ -285,48 +295,30 @@ public abstract class OAuthGeoStoreAuthenticationFilter extends OAuth2ClientAuth
         return scopes;
     }
 
-    protected static class StatusResponseWrapper extends HttpServletResponseWrapper{
-        private int respStatus;
-
-        public StatusResponseWrapper(HttpServletResponse response) {
-            super(response);
-        }
-
-        public int getRespStatus() {
-            return respStatus;
-        }
-
-        @Override
-        public void setStatus(int sc) {
-            respStatus=sc;
-            super.setStatus(sc);
-        }
-    }
-
-    protected PreAuthenticatedAuthenticationToken createPreAuthentication(String username, HttpServletRequest request, HttpServletResponse response){
-        User user=retrieveUserWithAuthorities(username,request,response);
-        SimpleGrantedAuthority authority=new SimpleGrantedAuthority("ROLE_"+user.getRole().toString());
-        PreAuthenticatedAuthenticationToken authenticationToken=new PreAuthenticatedAuthenticationToken(user,null, Arrays.asList(authority));
-        String idToken=OAuthUtils.getIdToken();
-        OAuth2AccessToken accessToken=restTemplate.getOAuth2ClientContext().getAccessToken();
-        authenticationToken.setDetails(new TokenDetails(accessToken,idToken));
+    protected PreAuthenticatedAuthenticationToken createPreAuthentication(String username, HttpServletRequest request, HttpServletResponse response) {
+        User user = retrieveUserWithAuthorities(username, request, response);
+        SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + user.getRole().toString());
+        PreAuthenticatedAuthenticationToken authenticationToken = new PreAuthenticatedAuthenticationToken(user, null, Arrays.asList(authority));
+        String idToken = OAuthUtils.getIdToken();
+        OAuth2AccessToken accessToken = restTemplate.getOAuth2ClientContext().getAccessToken();
+        authenticationToken.setDetails(new TokenDetails(accessToken, idToken));
         return authenticationToken;
     }
 
-    protected User retrieveUserWithAuthorities(String username, HttpServletRequest request, HttpServletResponse response){
-        User user=null;
-        if (username !=null){
+    protected User retrieveUserWithAuthorities(String username, HttpServletRequest request, HttpServletResponse response) {
+        User user = null;
+        if (username != null) {
             try {
-                user=userService.get(username);
+                user = userService.get(username);
             } catch (NotFoundServiceEx notFoundServiceEx) {
-                LOGGER.debug("User with username "+ username+" not found.");
+                LOGGER.debug("User with username " + username + " not found.");
             }
         }
-        if (user==null && configuration.getAutoCreateUser().booleanValue()){
+        if (user == null && configuration.getAutoCreateUser().booleanValue()) {
             try {
-                user=createUser(username,null,"");
+                user = createUser(username, null, "");
             } catch (BadRequestServiceEx | NotFoundServiceEx e) {
-                LOGGER.error("Error while autocreating the user: "+username,e);
+                LOGGER.error("Error while autocreating the user: " + username, e);
             }
         }
         return user;
@@ -338,13 +330,13 @@ public abstract class OAuthGeoStoreAuthenticationFilter extends OAuth2ClientAuth
         user.setName(userName);
         user.setNewPassword(credentials);
         user.setEnabled(true);
-        UserAttribute userAttribute= new UserAttribute();
+        UserAttribute userAttribute = new UserAttribute();
         userAttribute.setName(OAuth2Configuration.CONFIGURATION_NAME);
         userAttribute.setValue(configuration.getBeanName());
         user.setAttribute(Arrays.asList(userAttribute));
         Role role = Role.USER;
         user.setRole(role);
-        Set<UserGroup> groups=new HashSet<UserGroup>();
+        Set<UserGroup> groups = new HashSet<UserGroup>();
         /*UserGroup everyoneGroup = new UserGroup();
         everyoneGroup.setEnabled(true);
         everyoneGroup.setId(-1L);
@@ -370,18 +362,17 @@ public abstract class OAuthGeoStoreAuthenticationFilter extends OAuth2ClientAuth
         }
 
         SecurityContextHolder.getContext().setAuthentication(authResult);
-        TokenDetails tokenDetails=tokenDetails(authResult);
-        addRequestAttributes(request,authResult);
-        request.setAttribute(PROVIDER_KEY,configuration.getProvider());
+        addRequestAttributes(request, authResult);
+        request.setAttribute(PROVIDER_KEY, configuration.getProvider());
     }
 
-    private void addRequestAttributes(HttpServletRequest request,Authentication authentication){
-        TokenDetails tokenDetails=tokenDetails(authentication);
-        if (tokenDetails!=null && tokenDetails.getAccessToken() !=null){
-            OAuth2AccessToken accessToken=tokenDetails.getAccessToken();
+    private void addRequestAttributes(HttpServletRequest request, Authentication authentication) {
+        TokenDetails tokenDetails = tokenDetails(authentication);
+        if (tokenDetails != null && tokenDetails.getAccessToken() != null) {
+            OAuth2AccessToken accessToken = tokenDetails.getAccessToken();
             request.setAttribute(ACCESS_TOKEN_PARAM, accessToken.getValue());
-            if (accessToken.getRefreshToken()!=null)
-                request.setAttribute(REFRESH_TOKEN_PARAM,accessToken.getRefreshToken().getValue());
+            if (accessToken.getRefreshToken() != null)
+                request.setAttribute(REFRESH_TOKEN_PARAM, accessToken.getRefreshToken().getValue());
         }
     }
 
@@ -393,6 +384,26 @@ public abstract class OAuthGeoStoreAuthenticationFilter extends OAuth2ClientAuth
                 LOGGER.debug("Authentication request failed: " + failed.toString(), failed);
                 LOGGER.debug("Updated SecurityContextHolder to contain null Authentication");
             }
+        }
+    }
+
+    // A response wrapper needed to retrieve when needed the response status code.
+    // Needed due old version servlet api.
+    private static class StatusResponseWrapper extends HttpServletResponseWrapper {
+        private int respStatus;
+
+        public StatusResponseWrapper(HttpServletResponse response) {
+            super(response);
+        }
+
+        public int getRespStatus() {
+            return respStatus;
+        }
+
+        @Override
+        public void setStatus(int sc) {
+            respStatus = sc;
+            super.setStatus(sc);
         }
     }
 }
