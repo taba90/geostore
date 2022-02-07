@@ -2,28 +2,70 @@ package it.geosolutions.geostore.services.rest.security.oauth2;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.RemovalCause;
+import com.google.common.cache.RemovalListener;
+import org.apache.log4j.Logger;
+import org.springframework.beans.BeansException;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.common.DefaultOAuth2AccessToken;
+import org.springframework.security.oauth2.common.ExpiringOAuth2RefreshToken;
 import org.springframework.security.oauth2.common.OAuth2AccessToken;
+import org.springframework.security.oauth2.common.OAuth2RefreshToken;
+import org.springframework.web.client.RestTemplate;
 
+import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
 /**
  * A cache for OAuth2 Authentication object. Authentication instances are identified by the
  * corresponding accessToken.
  */
-public class OAuth2Cache {
+public class OAuth2Cache implements ApplicationContextAware {
+
+    private ApplicationContext context;
 
     private Cache<String, Authentication> cache;
 
     private int cacheSize = 1000;
-    private int cacheExpiration = 30;
+    private int cacheExpirationMinutes = 8;
+
+    private final static Logger LOGGER = Logger.getLogger(OAuth2Cache.class);
+
 
     public OAuth2Cache() {
-        cache = CacheBuilder.newBuilder()
+        CacheBuilder<String,Authentication> cacheBuilder = CacheBuilder.newBuilder()
                 .maximumSize(cacheSize)
-                .expireAfterWrite(cacheExpiration, TimeUnit.MINUTES)
-                .build();
+                .expireAfterWrite(cacheExpirationMinutes, TimeUnit.HOURS)
+                .removalListener(notification -> {
+                    if (notification.getCause().equals(RemovalCause.EXPIRED)){
+                        Authentication authentication=notification.getValue();
+                        revokeAuthIfRefreshExpired(authentication);
+                    }
+                });
+        this.cache=cacheBuilder.build();
+    }
+
+    protected void revokeAuthIfRefreshExpired(Authentication authentication){
+        TokenDetails tokenDetails=OAuthUtils.getTokenDetails(authentication);
+        if (tokenDetails!=null && tokenDetails.getAccessToken()!=null){
+            OAuth2AccessToken accessToken=tokenDetails.getAccessToken();
+            OAuth2RefreshToken refreshToken=accessToken.getRefreshToken();
+            if (refreshToken instanceof ExpiringOAuth2RefreshToken){
+                ExpiringOAuth2RefreshToken expiring=(ExpiringOAuth2RefreshToken) refreshToken;
+                OAuth2Configuration configuration=(OAuth2Configuration)context.getBean(tokenDetails.getProvider());
+                if (expiring.getExpiration().after(new Date())){
+                    RestTemplate template = new RestTemplate();
+                    ResponseEntity<String> responseEntity = template.exchange(configuration.getRevokeEndpoint() + "?token=" + refreshToken, HttpMethod.POST, null, String.class);
+                    if (responseEntity.getStatusCode().value() != 200) {
+                        LOGGER.error("Error while revoking authorization. Error is: " + responseEntity.getBody());
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -73,4 +115,8 @@ public class OAuth2Cache {
         this.cache.invalidate(accessToken);
     }
 
+    @Override
+    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        this.context=applicationContext;
+    }
 }

@@ -15,17 +15,19 @@ public class TokenDetails implements Serializable {
     private String idToken;
     private OAuth2AccessToken accessToken;
     private DecodedJWT decodedJWT;
+    private String provider;
 
     /**
      * @param accessToken the accessToken instance.
      * @param idToken     the JWT idToken
      */
-    public TokenDetails(OAuth2AccessToken accessToken, String idToken) {
+    public TokenDetails(OAuth2AccessToken accessToken, String idToken,String provider) {
         this.idToken = idToken;
         this.accessToken = accessToken;
         if (idToken != null) {
             decodedJWT = JWT.decode(idToken);
         }
+        this.provider=provider;
     }
 
     /**
@@ -67,5 +69,9 @@ public class TokenDetails implements Serializable {
      */
     public void setAccessToken(OAuth2AccessToken accessToken) {
         this.accessToken = accessToken;
+    }
+
+    public String getProvider() {
+        return provider;
     }
 }

@@ -301,7 +301,7 @@ public abstract class OAuthGeoStoreAuthenticationFilter extends OAuth2ClientAuth
         PreAuthenticatedAuthenticationToken authenticationToken = new PreAuthenticatedAuthenticationToken(user, null, Arrays.asList(authority));
         String idToken = OAuthUtils.getIdToken();
         OAuth2AccessToken accessToken = restTemplate.getOAuth2ClientContext().getAccessToken();
-        authenticationToken.setDetails(new TokenDetails(accessToken, idToken));
+        authenticationToken.setDetails(new TokenDetails(accessToken, idToken,configuration.getBeanName()));
         return authenticationToken;
     }
 

@@ -102,7 +102,7 @@ public abstract class OAuthSessionServiceDelegate implements SessionServiceDeleg
         if (newToken != null && newToken.getValue() != null) {
             String refreshed = newToken.getValue();
             // update the Authentication
-            updateAuthToken(accessToken, newToken, refreshToken);
+            updateAuthToken(accessToken, newToken, refreshToken,configuration);
             sessionToken = sessionToken(refreshed, refreshToken, newToken.getExpiration());
         } else {
             // the refresh token was invalid. lets clear the session and send a remote logout.
@@ -130,7 +130,7 @@ public abstract class OAuthSessionServiceDelegate implements SessionServiceDeleg
 
     // Builds an authentication instance out of the passed values.
     // Sets it to the cache and to the SecurityContext to be sure the new token is updates.
-    private Authentication updateAuthToken(String oldToken, OAuth2AccessToken newToken, String refreshToken) {
+    private Authentication updateAuthToken(String oldToken, OAuth2AccessToken newToken, String refreshToken, OAuth2Configuration conf) {
         Authentication authentication = cache().get(oldToken);
         if (authentication == null)
             authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -145,7 +145,7 @@ public abstract class OAuthSessionServiceDelegate implements SessionServiceDeleg
             if (refreshToken != null) {
                 accessToken.setRefreshToken(new DefaultOAuth2RefreshToken(refreshToken));
             }
-            updated.setDetails(new TokenDetails(accessToken, idToken));
+            updated.setDetails(new TokenDetails(accessToken, idToken,conf.getBeanName()));
             cache().putCacheEntry(newToken.getValue(), updated);
             SecurityContextHolder.getContext().setAuthentication(updated);
             authentication = updated;
