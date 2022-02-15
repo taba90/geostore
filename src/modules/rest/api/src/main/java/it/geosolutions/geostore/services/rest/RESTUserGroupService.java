@@ -19,6 +19,7 @@
  */
 package it.geosolutions.geostore.services.rest;
 
+import it.geosolutions.geostore.core.model.User;
 import it.geosolutions.geostore.core.model.UserGroup;
 import it.geosolutions.geostore.services.rest.exception.BadRequestWebEx;
 import it.geosolutions.geostore.services.rest.exception.NotFoundWebEx;
@@ -68,13 +69,13 @@ public interface RESTUserGroupService {
 	@Path("/group/{id}")
     @Secured({ "ROLE_ADMIN" })
     @Produces({ MediaType.TEXT_XML, MediaType.APPLICATION_JSON })
-    RESTUserGroup get(@Context SecurityContext sc, @PathParam("id") long id) throws NotFoundWebEx;
+    RESTUserGroup get(@Context SecurityContext sc, @PathParam("id") long id,@QueryParam("includeattributes") @DefaultValue("false") boolean includeAttributes) throws NotFoundWebEx;
     
     @GET
 	@Path("/group/name/{name}")
     @Secured({ "ROLE_ADMIN" })
     @Produces({ MediaType.TEXT_XML, MediaType.APPLICATION_JSON })
-    RESTUserGroup get(@Context SecurityContext sc, @PathParam("id") String name) throws NotFoundWebEx;
+    RESTUserGroup get(@Context SecurityContext sc, @PathParam("name") String name, @QueryParam("includeattributes") @DefaultValue("false") boolean includeAttributes) throws NotFoundWebEx;
     
     @POST
     @Path("/group/{userid}/{groupid}")
@@ -101,4 +102,12 @@ public interface RESTUserGroupService {
     @Produces({ MediaType.TEXT_XML, MediaType.APPLICATION_JSON })    
     @Secured({ "ROLE_ADMIN" })
     ShortResourceList updateSecurityRules(@Context SecurityContext sc, @Multipart("resourcelist")ShortResourceList resourcesToSet, @PathParam("groupId") Long groupId, @PathParam("canRead") Boolean canRead, @PathParam("canWrite") Boolean canWrite) throws BadRequestWebEx, NotFoundWebEx;
+
+    @PUT
+    @Path("/group/{id}")
+    @Consumes({ MediaType.APPLICATION_XML, MediaType.TEXT_XML,MediaType.APPLICATION_JSON  })
+    @Produces({MediaType.TEXT_PLAIN})
+    @Secured({ "ROLE_ADMIN" })
+    long update(@Context SecurityContext sc, @PathParam("id") long id, @Multipart("userGroup") UserGroup userGroup)
+            throws NotFoundWebEx;
 }
