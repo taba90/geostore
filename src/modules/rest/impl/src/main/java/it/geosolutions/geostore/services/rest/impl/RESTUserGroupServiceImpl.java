@@ -34,6 +34,7 @@ import it.geosolutions.geostore.services.exception.NotFoundServiceEx;
 import it.geosolutions.geostore.services.rest.RESTUserGroupService;
 import it.geosolutions.geostore.services.rest.exception.BadRequestWebEx;
 import it.geosolutions.geostore.services.rest.exception.NotFoundWebEx;
+import it.geosolutions.geostore.services.rest.model.RESTUser;
 import it.geosolutions.geostore.services.rest.model.RESTUserGroup;
 import it.geosolutions.geostore.services.rest.model.ShortResourceList;
 import it.geosolutions.geostore.services.rest.model.UserGroupList;
@@ -44,9 +45,11 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import javax.ws.rs.core.SecurityContext;
 
+import it.geosolutions.geostore.services.rest.model.UserList;
 import org.apache.log4j.Logger;
 
 /**
@@ -76,7 +79,7 @@ public class RESTUserGroupServiceImpl implements RESTUserGroupService {
      * (non-Javadoc) @see it.geosolutions.geostore.services.rest.RESTUserGroupService#insert(javax.ws.rs.core.SecurityContext, it.geosolutions.geostore.core.model.UserGroup)
      */
     @Override
-    public long insert(SecurityContext sc, UserGroup userGroup){
+    public long insert(SecurityContext sc, RESTUserGroup userGroup){
         if (userGroup == null) {
             throw new BadRequestWebEx("User is null");
         }
@@ -86,12 +89,16 @@ public class RESTUserGroupServiceImpl implements RESTUserGroupService {
         
         long id = -1;
         try {
+            UserGroup group=new UserGroup();
+            group.setGroupName(userGroup.getGroupName());
+            group.setDescription(userGroup.getDescription());
+            group.setEnabled(true);
             List<UserGroupAttribute> ugAttrs = userGroup.getAttributes();
             //persist the user first
             if (ugAttrs != null) {
                 userGroup.setAttributes(null);
             }
-            id = userGroupService.insert(userGroup);
+            id = userGroupService.insert(group);
             //insert attributes after user creation
             if (ugAttrs != null) {
                 userGroupService.updateAttributes(id, ugAttrs);
@@ -221,7 +228,7 @@ public class RESTUserGroupServiceImpl implements RESTUserGroupService {
     }
 
     @Override
-    public long update(SecurityContext sc, long id, UserGroup newGroup) throws NotFoundWebEx {
+    public long update(SecurityContext sc, long id, RESTUserGroup newGroup) throws NotFoundWebEx {
         try {
 
             UserGroup old = userGroupService.get(id);
@@ -241,7 +248,7 @@ public class RESTUserGroupServiceImpl implements RESTUserGroupService {
         }
     }
 
-    private UserGroup updateGroupObject(UserGroup newGroup, UserGroup old){
+    private UserGroup updateGroupObject(RESTUserGroup newGroup, UserGroup old){
         String name=newGroup.getGroupName();
         if (name!= null && !name.trim().isEmpty())
             old.setGroupName(name);
@@ -250,19 +257,18 @@ public class RESTUserGroupServiceImpl implements RESTUserGroupService {
         if (description!= null && !description.trim().isEmpty())
             old.setDescription(description);
 
-        List<SecurityRule> rules=newGroup.getSecurity();
-        if (rules!=null && ! rules.isEmpty())
-            old.setSecurity(rules);
-
-        List<User> users=newGroup.getUsers();
-        if (users!=null && !users.isEmpty())
-            old.setUsers(users);
-
-        old.setEnabled(newGroup.isEnabled());
+        UserList users=newGroup.getRestUsers();
+        if (users!=null && users.getList()!=null && !users.getList().isEmpty()){
+            old.setUsers(users.getList().stream().map(u->{
+                User user=new User();
+                user.setId(u.getId());
+                return user;
+            }).collect(Collectors.toList()));
+        }
         return old;
     }
 
-    private boolean updateAttributes(UserGroup newGroup, UserGroup oldGroup) throws NotFoundServiceEx {
+    private boolean updateAttributes(RESTUserGroup newGroup, UserGroup oldGroup) throws NotFoundServiceEx {
         boolean result=false;
         List<UserGroupAttribute> attributes=newGroup.getAttributes();
         if (attributes!=null && !attributes.isEmpty()){

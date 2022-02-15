@@ -57,7 +57,7 @@ public interface RESTUserGroupService {
     @Consumes({ MediaType.APPLICATION_XML, MediaType.TEXT_XML,MediaType.APPLICATION_JSON })
     @Produces({ MediaType.TEXT_PLAIN })
     @Secured({ "ROLE_ADMIN" })
-    long insert(@Context SecurityContext sc, @Multipart("userGroup") UserGroup userGroup)
+    long insert(@Context SecurityContext sc, @Multipart("userGroup") RESTUserGroup userGroup)
             throws BadRequestWebEx;
 
     @DELETE
@@ -69,13 +69,13 @@ public interface RESTUserGroupService {
 	@Path("/group/{id}")
     @Secured({ "ROLE_ADMIN" })
     @Produces({ MediaType.TEXT_XML, MediaType.APPLICATION_JSON })
-    RESTUserGroup get(@Context SecurityContext sc, @PathParam("id") long id,@QueryParam("includeattributes") @DefaultValue("false") boolean includeAttributes) throws NotFoundWebEx;
+    RESTUserGroup get(@Context SecurityContext sc, @PathParam("id") long id,@QueryParam("includeattributes") @DefaultValue("true") boolean includeAttributes) throws NotFoundWebEx;
     
     @GET
 	@Path("/group/name/{name}")
     @Secured({ "ROLE_ADMIN" })
     @Produces({ MediaType.TEXT_XML, MediaType.APPLICATION_JSON })
-    RESTUserGroup get(@Context SecurityContext sc, @PathParam("name") String name, @QueryParam("includeattributes") @DefaultValue("false") boolean includeAttributes) throws NotFoundWebEx;
+    RESTUserGroup get(@Context SecurityContext sc, @PathParam("name") String name, @QueryParam("includeattributes") @DefaultValue("true") boolean includeAttributes) throws NotFoundWebEx;
     
     @POST
     @Path("/group/{userid}/{groupid}")
@@ -108,6 +108,6 @@ public interface RESTUserGroupService {
     @Consumes({ MediaType.APPLICATION_XML, MediaType.TEXT_XML,MediaType.APPLICATION_JSON  })
     @Produces({MediaType.TEXT_PLAIN})
     @Secured({ "ROLE_ADMIN" })
-    long update(@Context SecurityContext sc, @PathParam("id") long id, @Multipart("userGroup") UserGroup userGroup)
+    long update(@Context SecurityContext sc, @PathParam("id") long id, @Multipart("userGroup") RESTUserGroup userGroup)
             throws NotFoundWebEx;
 }

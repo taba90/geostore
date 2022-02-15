@@ -15,7 +15,7 @@ import javax.xml.bind.annotation.XmlTransient;
 import java.io.Serializable;
 
 @Entity(name="UserGroupAttribute")
-@Table(name="gs_user_group_attribute", uniqueConstraints = { @UniqueConstraint(columnNames = { "name"}) }, indexes = {
+@Table(name="gs_user_group_attribute", indexes = {
         @Index(name = "idx_user_group_attr_name", columnList = "name"),
         @Index(name = "idx_user_group_attr_text", columnList = "string"),
         @Index(name= "idx_attr_user_group", columnList = "usergroup_id")
