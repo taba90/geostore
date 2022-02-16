@@ -47,6 +47,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.ws.rs.core.SecurityContext;
 
@@ -298,5 +299,24 @@ public class RESTUserGroupServiceImpl implements RESTUserGroupService {
             if (includeAttributes) result.setAttributes(ug.getAttributes());
         }
         return result;
+    }
+
+    @Override
+    public UserGroupList getByAttribute(SecurityContext sc, String name, String value, boolean ignoreCase) {
+        UserGroupAttribute groupAttribute=new UserGroupAttribute();
+        groupAttribute.setName(name);
+        groupAttribute.setValue(value);
+        Collection<UserGroup> groups=userGroupService.findByAttribute(groupAttribute,ignoreCase);
+        UserGroupList groupList;
+        if (groups!=null && !groups.isEmpty()){
+            Stream<UserGroup> groupStream=groups.stream();
+            List<RESTUserGroup> restGroups=groupStream
+                    .map(g->new RESTUserGroup(g,Collections.emptySet()))
+                    .collect(Collectors.toList());
+            groupList=new UserGroupList(restGroups);
+        } else {
+            groupList=new UserGroupList();
+        }
+        return groupList;
     }
 }

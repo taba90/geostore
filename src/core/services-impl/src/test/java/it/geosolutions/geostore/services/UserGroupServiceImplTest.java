@@ -35,6 +35,7 @@ import it.geosolutions.geostore.services.exception.NotFoundServiceEx;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
@@ -249,5 +250,44 @@ public class UserGroupServiceImplTest extends ServiceTestBase{
         assertTrue(updatedList.stream().anyMatch(g->g.getName().equals(attribute.getName())));
         assertTrue(updatedList.stream().anyMatch(g->g.getName().equals(attributeToUpdate2.getName())));
         assertFalse(updatedList.stream().anyMatch(g->g.getName().equals(attribute2.getName())));
+    }
+
+    @Test
+    public void testgetByAttributes() throws BadRequestServiceEx {
+        UserGroup group=new UserGroup();
+        group.setGroupName("GroupWithAttrs");
+        UserGroupAttribute attribute=new UserGroupAttribute();
+        attribute.setName("organization");
+        attribute.setValue("value");
+
+        UserGroupAttribute attribute2=new UserGroupAttribute();
+        attribute2.setName("attr2");
+        attribute2.setValue("value4,value5,value6");
+
+        group.setAttributes(Arrays.asList(attribute,attribute2));
+
+        long id=userGroupService.insert(group);
+
+        UserGroup group2=new UserGroup();
+        group2.setGroupName("GroupWithAttrs2");
+        UserGroupAttribute attribute21=new UserGroupAttribute();
+        attribute21.setName("Organization");
+        attribute21.setValue("value");
+
+        UserGroupAttribute attribute22=new UserGroupAttribute();
+        attribute22.setName("attr2");
+        attribute22.setValue("value4,value5,value6");
+
+        group2.setAttributes(Arrays.asList(attribute21,attribute22));
+
+        userGroupService.insert(group2);
+        UserGroupAttribute groupAttribute=new UserGroupAttribute();
+        groupAttribute.setName("organization");
+        groupAttribute.setValue("value");
+        Collection<UserGroup> groups=userGroupService.findByAttribute(groupAttribute,true);
+        assertEquals(2,groups.size());
+
+        groups=userGroupService.findByAttribute(groupAttribute,false);
+        assertEquals(1,groups.size());
     }
 }

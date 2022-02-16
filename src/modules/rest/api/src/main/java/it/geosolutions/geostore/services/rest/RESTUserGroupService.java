@@ -110,4 +110,10 @@ public interface RESTUserGroupService {
     @Secured({ "ROLE_ADMIN" })
     long update(@Context SecurityContext sc, @PathParam("id") long id, @Multipart("userGroup") RESTUserGroup userGroup)
             throws NotFoundWebEx;
+
+    @GET
+    @Path("/search/attribute/{name}/{value}")
+    @Produces({ MediaType.TEXT_XML, MediaType.APPLICATION_JSON })
+    @Secured({ "ROLE_ADMIN" })
+    UserGroupList getByAttribute(@Context SecurityContext sc, @PathParam("name") String name, @PathParam("value") String value, @QueryParam("ignoreCase") @DefaultValue("false") boolean ignoreCase);
 }

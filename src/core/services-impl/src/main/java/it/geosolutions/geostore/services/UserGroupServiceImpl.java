@@ -42,6 +42,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
@@ -451,6 +452,21 @@ public class UserGroupServiceImpl implements UserGroupService {
         group.setId(old.getId());
         userGroupDAO.merge(group);
         return old.getId();
+    }
+
+    @Override
+    public Collection<UserGroup> findByAttribute(UserGroupAttribute groupAttribute,boolean ignoreCase) {
+        Search searchCriteria = new Search(UserGroupAttribute.class);
+        if (!ignoreCase) {
+            searchCriteria.addFilterEqual("name", groupAttribute.getName());
+            searchCriteria.addFilterEqual("value", groupAttribute.getValue());
+        } else {
+            searchCriteria.addFilterILike("name",groupAttribute.getName());
+            searchCriteria.addFilterILike("value",groupAttribute.getValue());
+        }
+        searchCriteria.addFetch("userGroup");
+        List<UserGroupAttribute> attributes=userGroupAttributeDAO.search(searchCriteria);
+        return attributes.stream().map(a->a.getUserGroup()).filter(u-> u !=null).collect(Collectors.toSet());
     }
 
     private List<UserGroup> remapWithoutAttributes(Collection<UserGroup> groups){

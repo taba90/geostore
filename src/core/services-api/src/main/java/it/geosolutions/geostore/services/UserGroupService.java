@@ -166,4 +166,6 @@ public interface UserGroupService {
      * @throws BadRequestServiceEx
      */
     long update(UserGroup group) throws NotFoundServiceEx, BadRequestServiceEx;
+
+    Collection<UserGroup> findByAttribute(UserGroupAttribute groupAttribute,boolean ignoreCase);
 }

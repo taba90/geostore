@@ -20,6 +20,7 @@
 package it.geosolutions.geostore.services.rest.model;
 
 import it.geosolutions.geostore.core.model.User;
+import it.geosolutions.geostore.core.model.UserGroup;
 import it.geosolutions.geostore.core.model.UserGroupAttribute;
 
 import java.io.Serializable;
@@ -64,6 +65,10 @@ public class RESTUserGroup implements Serializable{
         }
         this.restUsers = new UserList(list); 
         this.description = description;
+    }
+
+    public RESTUserGroup(UserGroup group, Set<User> users){
+        this(group.getId(),group.getGroupName(),users,group.getDescription());
     }
 
     /**
