@@ -434,7 +434,6 @@ public class UserGroupServiceImpl implements UserGroupService {
                 userGroupAttributeDAO.removeById(a.getId());
             }
         }
-
         //
         // Saving old attributes
         //

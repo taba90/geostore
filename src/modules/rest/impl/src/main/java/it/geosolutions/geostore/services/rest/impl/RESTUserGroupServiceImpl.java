@@ -41,6 +41,7 @@ import it.geosolutions.geostore.services.rest.model.UserGroupList;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -236,8 +237,8 @@ public class RESTUserGroupServiceImpl implements RESTUserGroupService {
                 throw new NotFoundWebEx("UserGroup not found");
             }
             old=updateGroupObject(newGroup,old);
-            boolean groupAttributes=updateAttributes(newGroup,old);
-            if (groupAttributes) old.setAttributes(null);
+            updateAttributes(newGroup,old);
+            old.setAttributes(null);
             id = userGroupService.update(old);
             return id;
 
@@ -268,21 +269,19 @@ public class RESTUserGroupServiceImpl implements RESTUserGroupService {
         return old;
     }
 
-    private boolean updateAttributes(RESTUserGroup newGroup, UserGroup oldGroup) throws NotFoundServiceEx {
-        boolean result=false;
+    private void updateAttributes(RESTUserGroup newGroup, UserGroup oldGroup) throws NotFoundServiceEx {
         List<UserGroupAttribute> attributes=newGroup.getAttributes();
+        List<UserGroupAttribute> newList= Collections.emptyList();
         if (attributes!=null && !attributes.isEmpty()){
-            List<UserGroupAttribute> newList=new ArrayList<>(attributes.size());
+            newList=new ArrayList<>(attributes.size());
             for (UserGroupAttribute attr:attributes) {
                 UserGroupAttribute attribute=new UserGroupAttribute();
                 attribute.setName(attr.getName());
                 attribute.setValue(attr.getValue());
                 newList.add(attribute);
             }
-            userGroupService.updateAttributes(oldGroup.getId(),newList);
-            result=true;
         }
-        return result;
+        userGroupService.updateAttributes(oldGroup.getId(),newList);
     }
 
     @Override
