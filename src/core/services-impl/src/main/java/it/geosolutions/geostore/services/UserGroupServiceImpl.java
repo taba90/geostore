@@ -455,15 +455,17 @@ public class UserGroupServiceImpl implements UserGroupService {
     }
 
     @Override
-    public Collection<UserGroup> findByAttribute(UserGroupAttribute groupAttribute,boolean ignoreCase) {
+    public Collection<UserGroup> findByAttribute(String name, List<String> values,boolean ignoreCase) {
         Search searchCriteria = new Search(UserGroupAttribute.class);
         if (!ignoreCase) {
-            searchCriteria.addFilterEqual("name", groupAttribute.getName());
-            searchCriteria.addFilterEqual("value", groupAttribute.getValue());
+            searchCriteria.addFilterEqual("name", name);
         } else {
-            searchCriteria.addFilterILike("name",groupAttribute.getName());
-            searchCriteria.addFilterILike("value",groupAttribute.getValue());
+            searchCriteria.addFilterILike("name",name);
         }
+        if (values.size()> 1)
+            searchCriteria.addFilterIn("value",values);
+        else
+            searchCriteria.addFilterEqual("value", values.get(0));
         searchCriteria.addFetch("userGroup");
         List<UserGroupAttribute> attributes=userGroupAttributeDAO.search(searchCriteria);
         return attributes.stream().map(a->a.getUserGroup()).filter(u-> u !=null).collect(Collectors.toSet());

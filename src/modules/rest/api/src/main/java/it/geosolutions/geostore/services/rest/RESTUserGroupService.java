@@ -44,6 +44,8 @@ import javax.ws.rs.core.SecurityContext;
 import org.apache.cxf.jaxrs.ext.multipart.Multipart;
 import org.springframework.security.access.annotation.Secured;
 
+import java.util.List;
+
 /**
  * @author DamianoG
  * 
@@ -116,4 +118,10 @@ public interface RESTUserGroupService {
     @Produces({ MediaType.TEXT_XML, MediaType.APPLICATION_JSON })
     @Secured({ "ROLE_ADMIN" })
     UserGroupList getByAttribute(@Context SecurityContext sc, @PathParam("name") String name, @PathParam("value") String value, @QueryParam("ignoreCase") @DefaultValue("false") boolean ignoreCase);
+
+    @GET
+    @Path("/search/attribute/{name}")
+    @Produces({ MediaType.TEXT_XML, MediaType.APPLICATION_JSON })
+    @Secured({ "ROLE_ADMIN" })
+    UserGroupList getByAttribute(@Context SecurityContext sc, @PathParam("name") String name, @QueryParam("values") List<String> values, @QueryParam("ignoreCase") @DefaultValue("false") boolean ignoreCase);
 }

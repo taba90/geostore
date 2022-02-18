@@ -40,6 +40,7 @@ import it.geosolutions.geostore.services.rest.model.ShortResourceList;
 import it.geosolutions.geostore.services.rest.model.UserGroupList;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -303,10 +304,16 @@ public class RESTUserGroupServiceImpl implements RESTUserGroupService {
 
     @Override
     public UserGroupList getByAttribute(SecurityContext sc, String name, String value, boolean ignoreCase) {
-        UserGroupAttribute groupAttribute=new UserGroupAttribute();
-        groupAttribute.setName(name);
-        groupAttribute.setValue(value);
-        Collection<UserGroup> groups=userGroupService.findByAttribute(groupAttribute,ignoreCase);
+        return getGroups(name,Arrays.asList(value),ignoreCase);
+    }
+
+    @Override
+    public UserGroupList getByAttribute(SecurityContext sc, String name, List<String> values, boolean ignoreCase) {
+        return getGroups(name,values,ignoreCase);
+    }
+
+    private UserGroupList getGroups(String name, List<String> values, boolean ignoreCase){
+        Collection<UserGroup> groups=userGroupService.findByAttribute(name, values,ignoreCase);
         UserGroupList groupList;
         if (groups!=null && !groups.isEmpty()){
             Stream<UserGroup> groupStream=groups.stream();
@@ -319,4 +326,6 @@ public class RESTUserGroupServiceImpl implements RESTUserGroupService {
         }
         return groupList;
     }
+
+
 }

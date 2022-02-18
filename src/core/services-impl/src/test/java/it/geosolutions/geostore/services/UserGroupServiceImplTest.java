@@ -284,10 +284,10 @@ public class UserGroupServiceImplTest extends ServiceTestBase{
         UserGroupAttribute groupAttribute=new UserGroupAttribute();
         groupAttribute.setName("organization");
         groupAttribute.setValue("value");
-        Collection<UserGroup> groups=userGroupService.findByAttribute(groupAttribute,true);
+        Collection<UserGroup> groups=userGroupService.findByAttribute("organization",Arrays.asList("value"),true);
         assertEquals(2,groups.size());
 
-        groups=userGroupService.findByAttribute(groupAttribute,false);
+        groups=userGroupService.findByAttribute("organization",Arrays.asList("value"),false);
         assertEquals(1,groups.size());
     }
 }

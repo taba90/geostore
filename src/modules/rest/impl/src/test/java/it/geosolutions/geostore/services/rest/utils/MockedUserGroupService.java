@@ -138,8 +138,7 @@ public class MockedUserGroupService implements UserGroupService {
     }
 
     @Override
-    public Collection<UserGroup> findByAttribute(UserGroupAttribute groupAttribute,boolean ignoreCase) {
+    public Collection<UserGroup> findByAttribute(String name, List<String> values, boolean ignoreCase) {
         return null;
     }
-
 }

@@ -167,5 +167,5 @@ public interface UserGroupService {
      */
     long update(UserGroup group) throws NotFoundServiceEx, BadRequestServiceEx;
 
-    Collection<UserGroup> findByAttribute(UserGroupAttribute groupAttribute,boolean ignoreCase);
+    Collection<UserGroup> findByAttribute(String name, List<String> values,boolean ignoreCase);
 }
