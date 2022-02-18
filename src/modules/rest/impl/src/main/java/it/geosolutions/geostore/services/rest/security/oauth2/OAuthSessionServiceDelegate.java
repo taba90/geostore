@@ -5,6 +5,7 @@ import it.geosolutions.geostore.services.rest.SessionServiceDelegate;
 import it.geosolutions.geostore.services.rest.exception.NotFoundWebEx;
 import it.geosolutions.geostore.services.rest.model.SessionToken;
 import org.apache.log4j.Logger;
+import org.aspectj.apache.bcel.generic.LOOKUPSWITCH;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
@@ -74,6 +75,8 @@ public abstract class OAuthSessionServiceDelegate implements SessionServiceDeleg
         SessionToken sessionToken = null;
         OAuth2Configuration configuration = configuration();
         if ((expiresIn == null || fiveMinutesFromNow.after(expiresIn)) && refreshToken != null) {
+            if (LOGGER.isDebugEnabled())
+                LOGGER.info("Going to refresh the token.");
             doRefresh(refreshToken, accessToken, configuration);
         }
         if (sessionToken == null)
@@ -136,6 +139,8 @@ public abstract class OAuthSessionServiceDelegate implements SessionServiceDeleg
             authentication = SecurityContextHolder.getContext().getAuthentication();
 
         if (authentication instanceof PreAuthenticatedAuthenticationToken) {
+            if (LOGGER.isDebugEnabled())
+                LOGGER.info("Updating the cache and the SecurityContext with new Auth details");
             String idToken = null;
             TokenDetails details = getTokenDetails(authentication);
             idToken = details.getIdToken();
@@ -145,6 +150,8 @@ public abstract class OAuthSessionServiceDelegate implements SessionServiceDeleg
             if (refreshToken != null) {
                 accessToken.setRefreshToken(new DefaultOAuth2RefreshToken(refreshToken));
             }
+            if (LOGGER.isDebugEnabled())
+                LOGGER.debug("Creating new details. AccessToken: "+accessToken+" IdToken: "+idToken);
             updated.setDetails(new TokenDetails(accessToken, idToken,conf.getBeanName()));
             cache().putCacheEntry(newToken.getValue(), updated);
             SecurityContextHolder.getContext().setAuthentication(updated);
@@ -195,6 +202,9 @@ public abstract class OAuthSessionServiceDelegate implements SessionServiceDeleg
             OAuth2Configuration configuration = configuration();
             revokeAuthorization(token, configuration);
             clearSession(restTemplate);
+        }else {
+            if (LOGGER.isDebugEnabled())
+                LOGGER.info("Unable to retrieve access token. Remote logout was not executed.");
         }
         clearCookies(request, response);
     }
@@ -225,6 +235,8 @@ public abstract class OAuthSessionServiceDelegate implements SessionServiceDeleg
     protected void revokeAuthorization(OAuth2AccessToken token, OAuth2Configuration configuration) {
         String tokenValue = token.getRefreshToken() != null ? token.getRefreshToken().getValue() : token.getValue();
         if (configuration.getRevokeEndpoint() != null && tokenValue != null) {
+            if (LOGGER.isDebugEnabled())
+                LOGGER.info("Performing remote logout");
             callRevokeEndpoint(tokenValue, configuration.getRevokeEndpoint());
         }
     }

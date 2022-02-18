@@ -144,6 +144,9 @@ public class GeoStoreRemoteTokenServices extends RemoteTokenServices {
         ParameterizedTypeReference<Map<String, Object>> map =
                 new ParameterizedTypeReference<Map<String, Object>>() {
                 };
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.info("Executing request " + path+" form data are "+formData);
+        }
         return restTemplate
                 .exchange(path, HttpMethod.POST, new HttpEntity<>(formData, headers), map)
                 .getBody();

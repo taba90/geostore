@@ -87,7 +87,7 @@ public class DiscoveryClient {
     }
 
     private String collectScopes(List<String> scopes) {
-        return scopes.stream().collect(Collectors.joining(" "));
+        return scopes.stream().collect(Collectors.joining(","));
     }
 
     protected String getUserinfoEndpointAttrName() {

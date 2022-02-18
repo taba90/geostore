@@ -55,9 +55,18 @@ public class OAuthLoginRestImpl implements OAuthLoginRest, ApplicationContextAwa
             try {
                 result = result.status(302)
                         .location(new URI(configuration.getInternalRedirectUri()));
-                if (token != null) result = result.cookie(cookie(ACCESS_TOKEN_PARAM, token));
-                if (refreshToken != null) result = result.cookie(cookie(REFRESH_TOKEN_PARAM, refreshToken));
+                if (token != null) {
+                    if(LOGGER.isDebugEnabled())
+                        LOGGER.info("AccessToken found");
+                    result = result.cookie(cookie(ACCESS_TOKEN_PARAM, token));
+                }
+                if (refreshToken != null){
+                        if(LOGGER.isDebugEnabled())
+                            LOGGER.info("RefreshToken found");
+                    result = result.cookie(cookie(REFRESH_TOKEN_PARAM, refreshToken));
+                }
             } catch (URISyntaxException e) {
+                LOGGER.error(e);
                 result = result
                         .status(Response.Status.INTERNAL_SERVER_ERROR)
                         .entity("Exception while parsing the internal redirect url: " + e.getMessage());

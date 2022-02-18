@@ -8,6 +8,7 @@ import it.geosolutions.geostore.services.UserService;
 import it.geosolutions.geostore.services.exception.BadRequestServiceEx;
 import it.geosolutions.geostore.services.exception.NotFoundServiceEx;
 import org.apache.log4j.Logger;
+import org.aspectj.apache.bcel.generic.LOOKUPSWITCH;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
@@ -171,7 +172,9 @@ public abstract class OAuthGeoStoreAuthenticationFilter extends OAuth2ClientAuth
 
 
     protected Authentication performOAuthAuthentication(HttpServletRequest request, HttpServletResponse response, OAuth2AccessToken accessToken) {
-
+        if(LOGGER.isDebugEnabled()){
+            LOGGER.info("About to perform remote authentication.");
+        }
         String principal = null;
         PreAuthenticatedAuthenticationToken result = null;
         try {
@@ -249,9 +252,11 @@ public abstract class OAuthGeoStoreAuthenticationFilter extends OAuth2ClientAuth
                 LOGGER.info(
                         "Please refer to the GeoServer OAuth2 Plugin Documentation in order to find the steps for importing the SSH certificates.");
             } else {
-                LOGGER.error(
-                        "Could not Authorize OAuth2 Resource due to the following exception:",
-                        e);
+                if (LOGGER.isDebugEnabled()) {
+                    LOGGER.error(
+                            "Could not Authorize OAuth2 Resource due to the following exception:",
+                            e);
+                }
             }
         }
     }
