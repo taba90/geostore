@@ -28,17 +28,23 @@
 
 package it.geosolutions.geostore.services.rest.security.oauth2;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.provider.token.DefaultUserAuthenticationConverter;
 
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * GeoStore specific AuthenticationConverter.
  */
 public class GeoStoreAuthenticationConverter extends DefaultUserAuthenticationConverter {
     private Object usernameKey = USERNAME;
+
+    protected static Logger LOGGER =
+            LoggerFactory.getLogger(GeoStoreAuthenticationConverter.class);
 
     /**
      * Default Constructor.
@@ -58,6 +64,9 @@ public class GeoStoreAuthenticationConverter extends DefaultUserAuthenticationCo
 
     @Override
     public Authentication extractAuthentication(Map<String, ?> map) {
+        if (LOGGER.isDebugEnabled()){
+            LOGGER.info("Extracting authentication from a map with following keys: "+map.keySet().stream().collect(Collectors.joining(",")));
+        }
         if (map.containsKey(usernameKey)) {
             return new UsernamePasswordAuthenticationToken(map.get(usernameKey), "N/A", null);
         }

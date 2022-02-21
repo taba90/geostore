@@ -47,8 +47,11 @@ public class GeoStoreAccessTokenConverter extends DefaultAccessTokenConverter {
     protected UserAuthenticationConverter userTokenConverter;
 
     public GeoStoreAccessTokenConverter(){
+        this("email");
+    }
+    public GeoStoreAccessTokenConverter(String usernameKey){
         final DefaultUserAuthenticationConverter defaultUserAuthConverter =
-                new GeoStoreAuthenticationConverter("email");
+                new GeoStoreAuthenticationConverter(usernameKey);
         setUserTokenConverter(defaultUserAuthConverter);
     }
 
