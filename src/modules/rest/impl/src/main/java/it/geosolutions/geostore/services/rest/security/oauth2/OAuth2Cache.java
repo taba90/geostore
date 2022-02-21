@@ -1,14 +1,39 @@
+/* ====================================================================
+ *
+ * Copyright (C) 2022 GeoSolutions S.A.S.
+ * http://www.geo-solutions.it
+ *
+ * GPLv3 + Classpath exception
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.
+ *
+ * ====================================================================
+ *
+ * This software consists of voluntary contributions made by developers
+ * of GeoSolutions.  For more information on GeoSolutions, please see
+ * <http://www.geo-solutions.it/>.
+ *
+ */
 package it.geosolutions.geostore.services.rest.security.oauth2;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.RemovalCause;
-import com.google.common.cache.RemovalListener;
 import org.apache.log4j.Logger;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.common.DefaultOAuth2AccessToken;
@@ -50,7 +75,7 @@ public class OAuth2Cache implements ApplicationContextAware {
     }
 
     protected void revokeAuthIfRefreshExpired(Authentication authentication){
-        TokenDetails tokenDetails=OAuthUtils.getTokenDetails(authentication);
+        TokenDetails tokenDetails= OAuth2Utils.getTokenDetails(authentication);
         if (tokenDetails!=null && tokenDetails.getAccessToken()!=null){
             OAuth2AccessToken accessToken=tokenDetails.getAccessToken();
             OAuth2RefreshToken refreshToken=accessToken.getRefreshToken();
@@ -58,10 +83,13 @@ public class OAuth2Cache implements ApplicationContextAware {
                 ExpiringOAuth2RefreshToken expiring=(ExpiringOAuth2RefreshToken) refreshToken;
                 OAuth2Configuration configuration=(OAuth2Configuration)context.getBean(tokenDetails.getProvider());
                 if (expiring.getExpiration().after(new Date())){
-                    RestTemplate template = new RestTemplate();
-                    ResponseEntity<String> responseEntity = template.exchange(configuration.getRevokeEndpoint() + "?token=" + refreshToken, HttpMethod.POST, null, String.class);
-                    if (responseEntity.getStatusCode().value() != 200) {
-                        LOGGER.error("Error while revoking authorization. Error is: " + responseEntity.getBody());
+                    OAuth2Configuration.Endpoint revokeEndpoint=configuration.buildRevokeEndpoint(expiring.getValue());
+                    if (revokeEndpoint!=null) {
+                        RestTemplate template = new RestTemplate();
+                        ResponseEntity<String> responseEntity = template.exchange(revokeEndpoint.getUrl(), revokeEndpoint.getMethod(), null, String.class);
+                        if (responseEntity.getStatusCode().value() != 200) {
+                            LOGGER.error("Error while revoking authorization. Error is: " + responseEntity.getBody());
+                        }
                     }
                 }
             }
@@ -90,9 +118,9 @@ public class OAuth2Cache implements ApplicationContextAware {
      */
     public Authentication putCacheEntry(String accessToken, Authentication authentication) {
         Authentication old = get(accessToken);
-        TokenDetails oldDetails = OAuthUtils.getTokenDetails(old);
+        TokenDetails oldDetails = OAuth2Utils.getTokenDetails(old);
         if (oldDetails != null) {
-            TokenDetails newDetails = OAuthUtils.getTokenDetails(authentication);
+            TokenDetails newDetails = OAuth2Utils.getTokenDetails(authentication);
             OAuth2AccessToken newToken = newDetails.getAccessToken();
             OAuth2AccessToken oldToken = oldDetails.getAccessToken();
             if (newToken.getRefreshToken() == null && oldToken != null) {

@@ -1,9 +1,38 @@
+/* ====================================================================
+ *
+ * Copyright (C) 2022 GeoSolutions S.A.S.
+ * http://www.geo-solutions.it
+ *
+ * GPLv3 + Classpath exception
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.
+ *
+ * ====================================================================
+ *
+ * This software consists of voluntary contributions made by developers
+ * of GeoSolutions.  For more information on GeoSolutions, please see
+ * <http://www.geo-solutions.it/>.
+ *
+ */
 package it.geosolutions.geostore.services.rest.security.oauth2;
 
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
@@ -28,7 +57,8 @@ import java.util.List;
 /**
  * Base abstract class for @Configuration classes providing needed beans from the Spring OAuth2 mechanism.
  */
-public abstract class OAuthGeoStoreSecurityConfiguration implements ApplicationContextAware {
+@Configuration
+public abstract class OAuth2GeoStoreSecurityConfiguration implements ApplicationContextAware {
 
     static final String DETAILS_ID = "oauth2-client";
 
@@ -48,15 +78,6 @@ public abstract class OAuthGeoStoreSecurityConfiguration implements ApplicationC
         return accessTokenRequest;
     }
 
-    /**
-     * Set the accessTokenRequest property.
-     *
-     * @param accessTokenRequest the accessTokenRequest to set
-     */
-    public void setAccessTokenRequest(AccessTokenRequest accessTokenRequest) {
-        this.accessTokenRequest = accessTokenRequest;
-    }
-
 
     protected OAuth2ProtectedResourceDetails resourceDetails() {
         AuthorizationCodeResourceDetails details = new AuthorizationCodeResourceDetails();
@@ -74,10 +95,10 @@ public abstract class OAuthGeoStoreSecurityConfiguration implements ApplicationC
     }
 
     protected GeoStoreOAuthRestTemplate restTemplate() {
-        return new GeoStoreOAuthRestTemplate(resourceDetails(), new DefaultOAuth2ClientContext(getAccessTokenRequest()), getOAuthAppConfiguration());
+        return new GeoStoreOAuthRestTemplate(resourceDetails(), new DefaultOAuth2ClientContext(getAccessTokenRequest()),configuration());
     }
 
-    public GeoStoreOAuthRestTemplate getConfiguredRestTemplate() {
+    public GeoStoreOAuthRestTemplate oauth2RestTemplate() {
 
         GeoStoreOAuthRestTemplate oAuth2RestTemplate = restTemplate();
         setJacksonConverter(oAuth2RestTemplate);
@@ -113,12 +134,15 @@ public abstract class OAuthGeoStoreSecurityConfiguration implements ApplicationC
         jacksonConverter.setSupportedMediaTypes(Arrays.asList(new MediaType("application", "json", Charset.forName("UTF-8"))));
     }
 
-    protected OAuth2Configuration getOAuthAppConfiguration() {
-        return context.getBean(OAuth2Configuration.class);
-    }
-
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.context = applicationContext;
     }
+
+    @Bean
+    public OAuth2Cache oAuth2Cache(){
+        return new OAuth2Cache();
+    }
+
+    public abstract OAuth2Configuration configuration();
 }

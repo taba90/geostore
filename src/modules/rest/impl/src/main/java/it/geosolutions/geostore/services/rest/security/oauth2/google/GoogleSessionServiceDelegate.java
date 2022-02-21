@@ -1,37 +1,55 @@
+/* ====================================================================
+ *
+ * Copyright (C) 2022 GeoSolutions S.A.S.
+ * http://www.geo-solutions.it
+ *
+ * GPLv3 + Classpath exception
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.
+ *
+ * ====================================================================
+ *
+ * This software consists of voluntary contributions made by developers
+ * of GeoSolutions.  For more information on GeoSolutions, please see
+ * <http://www.geo-solutions.it/>.
+ *
+ */
 package it.geosolutions.geostore.services.rest.security.oauth2.google;
 
 import it.geosolutions.geostore.services.rest.RESTSessionService;
 import it.geosolutions.geostore.services.rest.security.oauth2.OAuth2Configuration;
-import it.geosolutions.geostore.services.rest.security.oauth2.OAuthSessionServiceDelegate;
-import org.apache.log4j.Logger;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.client.RestTemplate;
+import it.geosolutions.geostore.services.rest.security.oauth2.OAuth2SessionServiceDelegate;
+import org.springframework.security.oauth2.client.OAuth2RestTemplate;
 
 import static it.geosolutions.geostore.services.rest.security.oauth2.google.OAuthGoogleSecurityConfiguration.CONF_BEAN_NAME;
 
 /**
- * Google implementation of the {@link OAuthSessionServiceDelegate}.
+ * Google implementation of the {@link OAuth2SessionServiceDelegate}.
  */
-public class GoogleSessionServiceDelegate extends OAuthSessionServiceDelegate {
-
-    private final static Logger LOGGER = Logger.getLogger(GoogleSessionServiceDelegate.class);
+public class GoogleSessionServiceDelegate extends OAuth2SessionServiceDelegate {
 
     public GoogleSessionServiceDelegate(RESTSessionService restSessionService) {
         super(restSessionService, "google");
     }
 
     @Override
-    protected void callRevokeEndpoint(String token, String url) {
-        RestTemplate template = new RestTemplate();
-        ResponseEntity<String> responseEntity = template.exchange(url + "?token=" + token, HttpMethod.POST, null, String.class);
-        if (responseEntity.getStatusCode().value() != 200) {
-            LOGGER.error("Error while revoking authorization. Error is: " + responseEntity.getBody());
-        }
+    protected OAuth2Configuration configuration() {
+        return configuration(CONF_BEAN_NAME);
     }
 
     @Override
-    protected OAuth2Configuration configuration() {
-        return configuration(CONF_BEAN_NAME);
+    protected OAuth2RestTemplate restTemplate() {
+        return (OAuth2RestTemplate) applicationContext.getBean("googleOpenIdRestTemplate");
     }
 }

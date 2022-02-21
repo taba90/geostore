@@ -1,3 +1,31 @@
+/* ====================================================================
+ *
+ * Copyright (C) 2022 GeoSolutions S.A.S.
+ * http://www.geo-solutions.it
+ *
+ * GPLv3 + Classpath exception
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.
+ *
+ * ====================================================================
+ *
+ * This software consists of voluntary contributions made by developers
+ * of GeoSolutions.  For more information on GeoSolutions, please see
+ * <http://www.geo-solutions.it/>.
+ *
+ */
+
 package it.geosolutions.geostore.services.rest.security.oauth2;
 
 import it.geosolutions.geostore.core.model.User;
@@ -8,7 +36,6 @@ import it.geosolutions.geostore.services.UserService;
 import it.geosolutions.geostore.services.exception.BadRequestServiceEx;
 import it.geosolutions.geostore.services.exception.NotFoundServiceEx;
 import org.apache.log4j.Logger;
-import org.aspectj.apache.bcel.generic.LOOKUPSWITCH;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
@@ -51,15 +78,15 @@ import java.util.stream.Stream;
 import static com.google.common.collect.Lists.newArrayList;
 import static it.geosolutions.geostore.core.security.password.SecurityUtils.getUsername;
 import static it.geosolutions.geostore.services.rest.SessionServiceDelegate.PROVIDER_KEY;
-import static it.geosolutions.geostore.services.rest.security.oauth2.OAuthUtils.ACCESS_TOKEN_PARAM;
-import static it.geosolutions.geostore.services.rest.security.oauth2.OAuthUtils.REFRESH_TOKEN_PARAM;
+import static it.geosolutions.geostore.services.rest.security.oauth2.OAuth2Utils.ACCESS_TOKEN_PARAM;
+import static it.geosolutions.geostore.services.rest.security.oauth2.OAuth2Utils.REFRESH_TOKEN_PARAM;
 
 /**
  * Base filter class for an OAuth2 authentication filter. Authentication instances are cached.
  */
-public abstract class OAuthGeoStoreAuthenticationFilter extends OAuth2ClientAuthenticationProcessingFilter {
+public abstract class OAuth2GeoStoreAuthenticationFilter extends OAuth2ClientAuthenticationProcessingFilter {
 
-    private final static Logger LOGGER = Logger.getLogger(OAuthGeoStoreAuthenticationFilter.class);
+    private final static Logger LOGGER = Logger.getLogger(OAuth2GeoStoreAuthenticationFilter.class);
 
 
     @Autowired
@@ -80,7 +107,7 @@ public abstract class OAuthGeoStoreAuthenticationFilter extends OAuth2ClientAuth
      * @param configuration      the OAuth2 configuration.
      * @param oAuth2Cache        the cache.
      */
-    public OAuthGeoStoreAuthenticationFilter(RemoteTokenServices tokenServices, GeoStoreOAuthRestTemplate oAuth2RestTemplate, OAuth2Configuration configuration, OAuth2Cache oAuth2Cache) {
+    public OAuth2GeoStoreAuthenticationFilter(RemoteTokenServices tokenServices, GeoStoreOAuthRestTemplate oAuth2RestTemplate, OAuth2Configuration configuration, OAuth2Cache oAuth2Cache) {
         super("/**");
         super.setTokenServices(tokenServices);
         this.tokenServices = tokenServices;
@@ -94,19 +121,21 @@ public abstract class OAuthGeoStoreAuthenticationFilter extends OAuth2ClientAuth
     public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain) throws IOException, ServletException {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         // do we need to authenticate?
-        if (!configuration.isInvalid() && authentication == null)
+        if (configuration.isEnabled() && !configuration.isInvalid() && authentication == null)
             super.doFilter(req, res, chain);
-            // ok no need to authenticate but in case the security context
-            // holds a Token authentication we the the access token to request's attributes.
         else if (req instanceof HttpServletRequest)
+            // ok no need to authenticate but in case the security context
+            // holds a Token authentication we set the access token to request's attributes.
             addRequestAttributes((HttpServletRequest) req, authentication);
+        if (configuration.isEnabled() && configuration.isInvalid())
+            if (LOGGER.isDebugEnabled()) LOGGER.info("Skipping configured OAuth2 authentication. One or more mandatory properties are missing (clientId, clientSecret, authorizationUri, tokenUri");
         chain.doFilter(req, res);
     }
 
     @Override
     public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException, IOException, ServletException {
         Authentication authentication;
-        String token = OAuthUtils.tokenFromParamsOrBearer(ACCESS_TOKEN_PARAM, request);
+        String token = OAuth2Utils.tokenFromParamsOrBearer(ACCESS_TOKEN_PARAM, request);
         if (token != null) {
             authentication = cache.get(token);
             if (authentication == null) {
@@ -233,7 +262,7 @@ public abstract class OAuthGeoStoreAuthenticationFilter extends OAuth2ClientAuth
     }
 
     private void handleOAuthException(Exception e, HttpServletRequest req, StatusResponseWrapper resp) throws IOException, ServletException {
-        if (e instanceof UserRedirectRequiredException && configuration.getEnableRedirectEntryPoint()) {
+        if (e instanceof UserRedirectRequiredException && configuration.isEnableRedirectEntryPoint()) {
             handleUserRedirection(req, resp);
         } else if (e instanceof BadCredentialsException
                 || e instanceof ResourceAccessException) {
@@ -304,7 +333,7 @@ public abstract class OAuthGeoStoreAuthenticationFilter extends OAuth2ClientAuth
         User user = retrieveUserWithAuthorities(username, request, response);
         SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + user.getRole().toString());
         PreAuthenticatedAuthenticationToken authenticationToken = new PreAuthenticatedAuthenticationToken(user, null, Arrays.asList(authority));
-        String idToken = OAuthUtils.getIdToken();
+        String idToken = OAuth2Utils.getIdToken();
         OAuth2AccessToken accessToken = restTemplate.getOAuth2ClientContext().getAccessToken();
         authenticationToken.setDetails(new TokenDetails(accessToken, idToken,configuration.getBeanName()));
         return authenticationToken;
@@ -378,6 +407,7 @@ public abstract class OAuthGeoStoreAuthenticationFilter extends OAuth2ClientAuth
             request.setAttribute(ACCESS_TOKEN_PARAM, accessToken.getValue());
             if (accessToken.getRefreshToken() != null)
                 request.setAttribute(REFRESH_TOKEN_PARAM, accessToken.getRefreshToken().getValue());
+            request.setAttribute(PROVIDER_KEY,configuration.getProvider());
         }
     }
 

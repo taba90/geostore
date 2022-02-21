@@ -1,7 +1,34 @@
+/* ====================================================================
+ *
+ * Copyright (C) 2022 GeoSolutions S.A.S.
+ * http://www.geo-solutions.it
+ *
+ * GPLv3 + Classpath exception
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.
+ *
+ * ====================================================================
+ *
+ * This software consists of voluntary contributions made by developers
+ * of GeoSolutions.  For more information on GeoSolutions, please see
+ * <http://www.geo-solutions.it/>.
+ *
+ */
 package it.geosolutions.geostore.services.rest.security.oauth2.google;
 
 import it.geosolutions.geostore.services.rest.security.oauth2.OAuth2Configuration;
-import it.geosolutions.geostore.services.rest.security.oauth2.OAuthGeoStoreSecurityConfiguration;
+import it.geosolutions.geostore.services.rest.security.oauth2.OAuth2GeoStoreSecurityConfiguration;
 import it.geosolutions.geostore.services.rest.security.oauth2.GeoStoreOAuthRestTemplate;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,9 +43,9 @@ import static it.geosolutions.geostore.services.rest.security.oauth2.OAuth2Confi
 /**
  * Configuration class for OAuth2 Google client.
  */
-@Configuration
+@Configuration("googleSecConfig")
 @EnableOAuth2Client
-public class OAuthGoogleSecurityConfiguration extends OAuthGeoStoreSecurityConfiguration {
+public class OAuthGoogleSecurityConfiguration extends OAuth2GeoStoreSecurityConfiguration {
 
     static final String CONF_BEAN_NAME = "google" + CONFIG_NAME_SUFFIX;
 
@@ -30,6 +57,7 @@ public class OAuthGoogleSecurityConfiguration extends OAuthGeoStoreSecurityConfi
         return details;
     }
 
+    @Override
     @Bean(value = CONF_BEAN_NAME)
     public OAuth2Configuration configuration() {
         return new OAuth2Configuration();
@@ -41,8 +69,13 @@ public class OAuthGoogleSecurityConfiguration extends OAuthGeoStoreSecurityConfi
     @Override
     @Bean(value = "googleOpenIdRestTemplate")
     @Scope(value = "session", proxyMode = ScopedProxyMode.TARGET_CLASS)
-    public GeoStoreOAuthRestTemplate getConfiguredRestTemplate() {
-        return super.getConfiguredRestTemplate();
+    public GeoStoreOAuthRestTemplate oauth2RestTemplate() {
+        return super.oauth2RestTemplate();
+    }
+
+    @Bean
+    public GoogleOpenIdFilter googleOpenIdFilter(){
+        return new GoogleOpenIdFilter(oauth2RestTemplate(),configuration(),oAuth2Cache());
     }
 
 }

@@ -25,24 +25,37 @@
  * <http://www.geo-solutions.it/>.
  *
  */
-package it.geosolutions.geostore.services.rest.security.oauth2.google;
+package it.geosolutions.geostore.services.rest.security.oauth2;
 
-import it.geosolutions.geostore.services.rest.security.oauth2.DiscoveryClient;
-import it.geosolutions.geostore.services.rest.security.oauth2.OAuth2Cache;
-import it.geosolutions.geostore.services.rest.security.oauth2.OAuth2Configuration;
-import it.geosolutions.geostore.services.rest.security.oauth2.OAuth2GeoStoreAuthenticationFilter;
-import it.geosolutions.geostore.services.rest.security.oauth2.GeoStoreOAuthRestTemplate;
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.interfaces.Claim;
+import com.auth0.jwt.interfaces.DecodedJWT;
 
 /**
- * Google OAuth2 filter implementation.
+ * A class holding utilities method for handling JWT tokens.
  */
-public class GoogleOpenIdFilter extends OAuth2GeoStoreAuthenticationFilter {
+public class JWTHelper {
 
-
-    public GoogleOpenIdFilter(GeoStoreOAuthRestTemplate oAuth2RestOperations, OAuth2Configuration configuration, OAuth2Cache cache) {
-        super(new GoogleTokenServices(), oAuth2RestOperations, configuration, cache);
-        if (configuration.getDiscoveryUrl() != null && !"".equals(configuration.getDiscoveryUrl()))
-            new DiscoveryClient(configuration.getDiscoveryUrl()).autofill(configuration);
+    private DecodedJWT decodedJWT;
+    public JWTHelper(String jwtToken){
+        this.decodedJWT= JWT.decode(jwtToken);
     }
 
+    /**
+     * Get a claim by name from the idToken.
+     *
+     * @param claimName the name of the claim to retrieve.
+     * @param binding   the Class to which convert the claim value.
+     * @param <T>       the type of the claim value.
+     * @return the claim value.
+     */
+    public <T> T getClaim(String claimName, Class<T> binding) {
+        T result = null;
+        if (decodedJWT != null && claimName!=null) {
+            Claim claim = decodedJWT.getClaim(claimName);
+            if (claim != null)
+                result = claim.as(binding);
+        }
+        return result;
+    }
 }

@@ -1,3 +1,31 @@
+/* ====================================================================
+ *
+ * Copyright (C) 2022 GeoSolutions S.A.S.
+ * http://www.geo-solutions.it
+ *
+ * GPLv3 + Classpath exception
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.
+ *
+ * ====================================================================
+ *
+ * This software consists of voluntary contributions made by developers
+ * of GeoSolutions.  For more information on GeoSolutions, please see
+ * <http://www.geo-solutions.it/>.
+ *
+ */
+
 package it.geosolutions.geostore.services.rest.security.oauth2;
 
 import it.geosolutions.geostore.services.rest.exception.NotFoundWebEx;
@@ -18,24 +46,24 @@ import java.net.URISyntaxException;
 import java.util.Date;
 
 import static it.geosolutions.geostore.services.rest.security.oauth2.OAuth2Configuration.CONFIG_NAME_SUFFIX;
-import static it.geosolutions.geostore.services.rest.security.oauth2.OAuthUtils.ACCESS_TOKEN_PARAM;
-import static it.geosolutions.geostore.services.rest.security.oauth2.OAuthUtils.REFRESH_TOKEN_PARAM;
-import static it.geosolutions.geostore.services.rest.security.oauth2.OAuthUtils.getAccessToken;
-import static it.geosolutions.geostore.services.rest.security.oauth2.OAuthUtils.getRefreshAccessToken;
+import static it.geosolutions.geostore.services.rest.security.oauth2.OAuth2Utils.ACCESS_TOKEN_PARAM;
+import static it.geosolutions.geostore.services.rest.security.oauth2.OAuth2Utils.REFRESH_TOKEN_PARAM;
+import static it.geosolutions.geostore.services.rest.security.oauth2.OAuth2Utils.getAccessToken;
+import static it.geosolutions.geostore.services.rest.security.oauth2.OAuth2Utils.getRefreshAccessToken;
 
 /**
  * This class provides authentication entry point to login using an OAuth2 provider.
  */
-public class OAuthLoginRestImpl implements OAuthLoginRest, ApplicationContextAware {
+public class OAuth2LoginRestImpl implements OAuth2LoginRest, ApplicationContextAware {
 
     private ApplicationContext applicationContext;
 
-    private final static Logger LOGGER = Logger.getLogger(OAuthLoginRestImpl.class);
+    private final static Logger LOGGER = Logger.getLogger(OAuth2LoginRestImpl.class);
 
 
     @Override
     public void login(String provider) {
-        HttpServletResponse resp = OAuthUtils.getResponse();
+        HttpServletResponse resp = OAuth2Utils.getResponse();
         OAuth2Configuration configuration = configuration(provider);
         String login = configuration.buildLoginUri("offline");
         try {

@@ -25,24 +25,31 @@
  * <http://www.geo-solutions.it/>.
  *
  */
-package it.geosolutions.geostore.services.rest.security.oauth2.google;
+package it.geosolutions.geostore.services.rest.security.oauth2;
 
-import it.geosolutions.geostore.services.rest.security.oauth2.DiscoveryClient;
-import it.geosolutions.geostore.services.rest.security.oauth2.OAuth2Cache;
-import it.geosolutions.geostore.services.rest.security.oauth2.OAuth2Configuration;
-import it.geosolutions.geostore.services.rest.security.oauth2.OAuth2GeoStoreAuthenticationFilter;
-import it.geosolutions.geostore.services.rest.security.oauth2.GeoStoreOAuthRestTemplate;
+import it.geosolutions.geostore.services.rest.exception.NotFoundWebEx;
+import org.springframework.security.access.annotation.Secured;
+
+
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
+import javax.ws.rs.core.Response;
 
 /**
- * Google OAuth2 filter implementation.
+ * Base interface providing entry points to login using an OAuth2 provider.
  */
-public class GoogleOpenIdFilter extends OAuth2GeoStoreAuthenticationFilter {
+public interface OAuth2LoginRest {
 
+    @GET
+    @Path("/{provider}/login")
+    @Secured({"ROLE_USER", "ROLE_ADMIN", "ROLE_ANONYMOUS"})
+    void login(@PathParam("provider") String provider) throws NotFoundWebEx;
 
-    public GoogleOpenIdFilter(GeoStoreOAuthRestTemplate oAuth2RestOperations, OAuth2Configuration configuration, OAuth2Cache cache) {
-        super(new GoogleTokenServices(), oAuth2RestOperations, configuration, cache);
-        if (configuration.getDiscoveryUrl() != null && !"".equals(configuration.getDiscoveryUrl()))
-            new DiscoveryClient(configuration.getDiscoveryUrl()).autofill(configuration);
-    }
+    @GET
+    @Path("/{provider}/callback")
+    @Secured({"ROLE_USER", "ROLE_ADMIN"})
+    Response callback(@PathParam("provider") String provider) throws NotFoundWebEx;
+
 
 }

@@ -78,7 +78,7 @@
 	</bean>
 
 	<bean id="oauthLoginRest"
-		  class="it.geosolutions.geostore.services.rest.security.oauth2.OAuthLoginRestImpl">
+		  class="it.geosolutions.geostore.services.rest.security.oauth2.OAuth2LoginRestImpl">
 	</bean>
 	<!-- ==================================================================== -->
 	<!-- === REST Services ================================================== -->

@@ -25,9 +25,12 @@
 		<security:csrf disabled="true"/>
 		<security:custom-filter ref="authenticationTokenProcessingFilter" before="FORM_LOGIN_FILTER"/>
 		<security:custom-filter ref="sessionTokenProcessingFilter" after="FORM_LOGIN_FILTER"/>
-		<security:custom-filter ref="googleOAuthFilter" after="BASIC_AUTH_FILTER"/>
+		<security:custom-filter ref="googleOpenIdFilter" after="BASIC_AUTH_FILTER"/>
 		<security:anonymous />
 	</security:http>
+
+
+
 	<!-- Entry point -->
 	<bean id="restAuthenticationEntryPoint" class="it.geosolutions.geostore.services.rest.security.RestAuthenticationEntryPoint" >
 		<property name="realmName" value="GeoStore"></property>
@@ -37,14 +40,18 @@
 		class="it.geosolutions.geostore.services.rest.security.UserServiceAuthenticationProvider">
 	</bean>
 
+	<!-- OAuth2 beans -->
 	<context:annotation-config/>
-	<bean id="googleSecConfig" class="it.geosolutions.geostore.services.rest.security.oauth2.google.OAuthGoogleSecurityConfiguration"/>
-	<bean id="oauth2Cache" class="it.geosolutions.geostore.services.rest.security.oauth2.OAuth2Cache"/>
-	<bean class="it.geosolutions.geostore.services.rest.security.oauth2.google.GoogleOpenIdFilter" id="googleOAuthFilter">
-		<constructor-arg ref="googleOpenIdRestTemplate"/>
-		<constructor-arg ref="googleOAuth2Config"/>
-		<constructor-arg ref="oauth2Cache"/>
+
+	<bean id="googleSessionServiceDelegate"
+		  class="it.geosolutions.geostore.services.rest.security.oauth2.google.GoogleSessionServiceDelegate">
+		<constructor-arg ref="restSessionService"/>
 	</bean>
+
+	<bean id="googleSecurityConfiguration" class="it.geosolutions.geostore.services.rest.security.oauth2.google.OAuthGoogleSecurityConfiguration"/>
+
+	<!-- END OAuth2 beans-->
+
 	
 	<bean class="it.geosolutions.geostore.services.rest.security.UserAttributeTokenAuthenticationFilter"
         id="authenticationTokenProcessingFilter">
@@ -59,10 +66,6 @@
 		<constructor-arg ref="restSessionService"/>
 	</bean>
 
-	<bean id="oauth2SessionServiceDelegate"
-		  class="it.geosolutions.geostore.services.rest.security.oauth2.google.GoogleSessionServiceDelegate">
-		<constructor-arg ref="restSessionService"/>
-	</bean>
 	<!-- bean class="it.geosolutions.geostore.services.rest.security.WebServiceTokenAuthenticationFilter"
         id="authenticationTokenProcessingFilter">
         <constructor-arg><value>http://localhopst:8080/geoserver/www/{token}.txt</value></constructor-arg>

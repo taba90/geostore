@@ -29,13 +29,9 @@ package it.geosolutions.geostore.services.rest.impl;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -43,7 +39,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.SecurityContext;
 
 import it.geosolutions.geostore.services.rest.SessionServiceDelegate;
-import it.geosolutions.geostore.services.rest.security.oauth2.OAuthUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 
 
