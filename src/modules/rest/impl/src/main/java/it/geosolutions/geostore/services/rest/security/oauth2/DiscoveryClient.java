@@ -90,27 +90,29 @@ public class DiscoveryClient {
      * @param conf the OAuth2Configuration.
      */
     public void autofill(OAuth2Configuration conf) {
-        Map response = restTemplate.getForObject(this.location, Map.class);
-        Optional.ofNullable(response.get(getAuthorizationEndpointAttrName()))
-                .ifPresent(uri -> conf.setAuthorizationUri((String) uri));
-        Optional.ofNullable(response.get(getTokenEndpointAttrName()))
-                .ifPresent(uri -> conf.setAccessTokenUri((String) uri));
-        Optional.ofNullable(response.get(getUserinfoEndpointAttrName()))
-                .ifPresent(uri -> conf.setCheckTokenEndpointUrl((String) uri));
-        Optional.ofNullable(response.get(getJwkSetUriAttrName()))
-                .ifPresent(uri -> conf.setIdTokenUri((String) uri));
-        Optional.ofNullable(response.get(getEndSessionEndpoint()))
-                .ifPresent(uri -> conf.setLogoutUri((String) uri));
-        Optional.ofNullable(response.get(getScopesSupported()))
-                .ifPresent(
-                        s -> {
-                            @SuppressWarnings("unchecked")
-                            List<String> scopes = (List<String>) s;
-                            conf.setScopes(collectScopes(scopes));
-                        });
-        Optional.ofNullable(response.get(getRevocationEndpoint()))
-                .ifPresent(
-                        s -> conf.setRevokeEndpoint((String) s));
+        if (location!=null) {
+            Map response = restTemplate.getForObject(this.location, Map.class);
+            Optional.ofNullable(response.get(getAuthorizationEndpointAttrName()))
+                    .ifPresent(uri -> conf.setAuthorizationUri((String) uri));
+            Optional.ofNullable(response.get(getTokenEndpointAttrName()))
+                    .ifPresent(uri -> conf.setAccessTokenUri((String) uri));
+            Optional.ofNullable(response.get(getUserinfoEndpointAttrName()))
+                    .ifPresent(uri -> conf.setCheckTokenEndpointUrl((String) uri));
+            Optional.ofNullable(response.get(getJwkSetUriAttrName()))
+                    .ifPresent(uri -> conf.setIdTokenUri((String) uri));
+            Optional.ofNullable(response.get(getEndSessionEndpoint()))
+                    .ifPresent(uri -> conf.setLogoutUri((String) uri));
+            Optional.ofNullable(response.get(getScopesSupported()))
+                    .ifPresent(
+                            s -> {
+                                @SuppressWarnings("unchecked")
+                                List<String> scopes = (List<String>) s;
+                                conf.setScopes(collectScopes(scopes));
+                            });
+            Optional.ofNullable(response.get(getRevocationEndpoint()))
+                    .ifPresent(
+                            s -> conf.setRevokeEndpoint((String) s));
+        }
     }
 
     private String collectScopes(List<String> scopes) {
