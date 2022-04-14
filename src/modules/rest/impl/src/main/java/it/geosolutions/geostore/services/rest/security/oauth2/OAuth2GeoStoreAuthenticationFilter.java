@@ -401,13 +401,15 @@ public abstract class OAuth2GeoStoreAuthenticationFilter extends OAuth2ClientAut
     }
 
     private void addRequestAttributes(HttpServletRequest request, Authentication authentication) {
-        TokenDetails tokenDetails = tokenDetails(authentication);
-        if (tokenDetails != null && tokenDetails.getAccessToken() != null) {
-            OAuth2AccessToken accessToken = tokenDetails.getAccessToken();
-            request.setAttribute(ACCESS_TOKEN_PARAM, accessToken.getValue());
-            if (accessToken.getRefreshToken() != null)
-                request.setAttribute(REFRESH_TOKEN_PARAM, accessToken.getRefreshToken().getValue());
-            request.setAttribute(PROVIDER_KEY,configuration.getProvider());
+        if (authentication!=null) {
+            TokenDetails tokenDetails = tokenDetails(authentication);
+            if (tokenDetails != null && tokenDetails.getAccessToken() != null) {
+                OAuth2AccessToken accessToken = tokenDetails.getAccessToken();
+                request.setAttribute(ACCESS_TOKEN_PARAM, accessToken.getValue());
+                if (accessToken.getRefreshToken() != null)
+                    request.setAttribute(REFRESH_TOKEN_PARAM, accessToken.getRefreshToken().getValue());
+                request.setAttribute(PROVIDER_KEY, configuration.getProvider());
+            }
         }
     }
 
