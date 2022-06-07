@@ -36,6 +36,7 @@ import it.geosolutions.geostore.services.UserGroupService;
 import it.geosolutions.geostore.services.UserService;
 import it.geosolutions.geostore.services.exception.BadRequestServiceEx;
 import it.geosolutions.geostore.services.exception.NotFoundServiceEx;
+import it.geosolutions.geostore.services.rest.security.TokenAuthenticationCache;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -66,7 +67,6 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpServletResponseWrapper;
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.util.Arrays;
@@ -104,23 +104,23 @@ public abstract class OAuth2GeoStoreAuthenticationFilter extends OAuth2ClientAut
 
     private AuthenticationEntryPoint authEntryPoint;
 
-    private OAuth2Cache cache;
+    private TokenAuthenticationCache cache;
 
 
     /**
      * @param tokenServices      a RemoteTokenServices instance.
      * @param oAuth2RestTemplate the rest template to use for OAuth2 requests.
      * @param configuration      the OAuth2 configuration.
-     * @param oAuth2Cache        the cache.
+     * @param tokenAuthenticationCache        the cache.
      */
-    public OAuth2GeoStoreAuthenticationFilter(RemoteTokenServices tokenServices, GeoStoreOAuthRestTemplate oAuth2RestTemplate, OAuth2Configuration configuration, OAuth2Cache oAuth2Cache) {
+    public OAuth2GeoStoreAuthenticationFilter(RemoteTokenServices tokenServices, GeoStoreOAuthRestTemplate oAuth2RestTemplate, OAuth2Configuration configuration, TokenAuthenticationCache tokenAuthenticationCache) {
         super("/**");
         super.setTokenServices(tokenServices);
         this.tokenServices = tokenServices;
         super.restTemplate = oAuth2RestTemplate;
         this.configuration = configuration;
         this.authEntryPoint = configuration.getAuthenticationEntryPoint();
-        this.cache = oAuth2Cache;
+        this.cache = tokenAuthenticationCache;
     }
 
     @Override
