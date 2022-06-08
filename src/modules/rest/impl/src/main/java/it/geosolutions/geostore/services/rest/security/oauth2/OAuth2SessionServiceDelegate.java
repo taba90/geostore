@@ -32,6 +32,7 @@ import it.geosolutions.geostore.services.rest.SessionServiceDelegate;
 import it.geosolutions.geostore.services.rest.exception.NotFoundWebEx;
 import it.geosolutions.geostore.services.rest.model.SessionToken;
 import it.geosolutions.geostore.services.rest.security.TokenAuthenticationCache;
+import it.geosolutions.geostore.services.rest.utils.GeoStoreContext;
 import org.apache.log4j.Logger;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
@@ -66,6 +67,7 @@ import java.util.Date;
 
 import static it.geosolutions.geostore.services.rest.security.oauth2.OAuth2Utils.ACCESS_TOKEN_PARAM;
 import static it.geosolutions.geostore.services.rest.security.oauth2.OAuth2Utils.REFRESH_TOKEN_PARAM;
+import static it.geosolutions.geostore.services.rest.security.oauth2.OAuth2Utils.fiveMinutesFromNow;
 import static it.geosolutions.geostore.services.rest.security.oauth2.OAuth2Utils.getParameterValue;
 import static it.geosolutions.geostore.services.rest.security.oauth2.OAuth2Utils.getRequest;
 import static it.geosolutions.geostore.services.rest.security.oauth2.OAuth2Utils.getResponse;
@@ -74,9 +76,7 @@ import static it.geosolutions.geostore.services.rest.security.oauth2.OAuth2Utils
 /**
  * Abstract implementation of an OAuth2 SessionServiceDelegate.
  */
-public abstract class OAuth2SessionServiceDelegate implements SessionServiceDelegate, ApplicationContextAware {
-
-    protected ApplicationContext applicationContext;
+public abstract class OAuth2SessionServiceDelegate implements SessionServiceDelegate {
 
     private final static Logger LOGGER = Logger.getLogger(OAuth2SessionServiceDelegate.class);
 
@@ -188,13 +188,6 @@ public abstract class OAuth2SessionServiceDelegate implements SessionServiceDele
         return authentication;
     }
 
-    private Date fiveMinutesFromNow() {
-        Calendar currentTimeNow = Calendar.getInstance();
-        System.out.println("Current time now : " + currentTimeNow.getTime());
-        currentTimeNow.add(Calendar.MINUTE, 5);
-        return currentTimeNow.getTime();
-    }
-
     private OAuth2AccessToken retrieveAccessToken(String accessToken) {
         Authentication authentication = cache().get(accessToken);
         OAuth2AccessToken result = null;
@@ -203,7 +196,7 @@ public abstract class OAuth2SessionServiceDelegate implements SessionServiceDele
             result = details.getAccessToken();
         }
         if (result == null) {
-            OAuth2ClientContext context = applicationContext.getBean(OAuth2RestTemplate.class).getOAuth2ClientContext();
+            OAuth2ClientContext context = GeoStoreContext.bean(OAuth2RestTemplate.class).getOAuth2ClientContext();
             if (context != null) result = context.getAccessToken();
         }
         if (result == null)
@@ -314,13 +307,8 @@ public abstract class OAuth2SessionServiceDelegate implements SessionServiceDele
         return c.getName().equalsIgnoreCase("JSESSIONID") || c.getName().equalsIgnoreCase(ACCESS_TOKEN_PARAM) || c.getName().equalsIgnoreCase(REFRESH_TOKEN_PARAM);
     }
 
-    @Override
-    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        this.applicationContext = applicationContext;
-    }
-
     private TokenAuthenticationCache cache() {
-        return applicationContext.getBean(TokenAuthenticationCache.class);
+        return GeoStoreContext.bean(TokenAuthenticationCache.class);
     }
 
     /**
@@ -337,7 +325,7 @@ public abstract class OAuth2SessionServiceDelegate implements SessionServiceDele
      * @return the config bean.
      */
     protected OAuth2Configuration configuration(String configBeanName) {
-        return (OAuth2Configuration) applicationContext.getBean(configBeanName);
+        return GeoStoreContext.bean(configBeanName,OAuth2Configuration.class);
     }
 
     /**

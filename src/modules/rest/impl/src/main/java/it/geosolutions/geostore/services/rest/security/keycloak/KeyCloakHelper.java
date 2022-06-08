@@ -25,6 +25,8 @@ public class KeyCloakHelper {
     public KeycloakDeployment getDeployment(HttpServletRequest request,HttpServletResponse response){
         HttpFacade exchange = new SimpleHttpFacade(request, response);
         KeycloakDeployment deployment = keycloakContext.resolveDeployment(exchange);
+        deployment.setDelegateBearerErrorResponseSending(true);
+        return deployment;
     }
 
     public RequestAuthenticator getAuthenticator(HttpServletRequest request, HttpServletResponse response, KeycloakDeployment deployment){
@@ -32,8 +34,9 @@ public class KeyCloakHelper {
                 new KeyCloakRequestWrapper(request);
         AdapterTokenStore tokenStore =
                 adapterTokenStoreFactory.createAdapterTokenStore(deployment, request);
+        SimpleHttpFacade simpleHttpFacade=new SimpleHttpFacade(request,response);
         return
                 new SpringSecurityRequestAuthenticator(
-                        exchange, request, deployment, tokenStore, -1);
+                        simpleHttpFacade, request, deployment, tokenStore, -1);
     }
 }
