@@ -8,11 +8,18 @@ import org.keycloak.adapters.KeycloakDeployment;
 import org.keycloak.adapters.RequestAuthenticator;
 import org.keycloak.adapters.spi.AuthChallenge;
 import org.keycloak.adapters.springsecurity.facade.SimpleHttpFacade;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.context.request.RequestContextHolder;
 
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.Date;
+
+import static it.geosolutions.geostore.services.rest.security.oauth2.OAuth2Utils.ACCESS_TOKEN_PARAM;
+import static it.geosolutions.geostore.services.rest.security.oauth2.OAuth2Utils.REFRESH_TOKEN_PARAM;
 
 public class KeyCloakLoginService extends Oauth2LoginService {
 
@@ -40,16 +47,25 @@ public class KeyCloakLoginService extends Oauth2LoginService {
             } catch (IOException e) {
             }
         } else {
-            /*for (Cookie cookie:request.getCookies()){
-                String name=cookie.getName();
-                if (name.equals(ACCESS_TOKEN_PARAM) || name.equals(REFRESH_TOKEN_PARAM)) {
-                    Cookie newCookie=new Cookie(cookie.getName(),cookie.getValue());
-                    newCookie.setMaxAge(60 * 60 * 24 * 1000);
-                    newCookie.setSecure(false);
-                    newCookie.setPath(cookie.getPath());
-                    response.addCookie(newCookie);
+            Authentication auth=SecurityContextHolder.getContext().getAuthentication();
+            if (auth.getDetails() instanceof KeycloakTokenDetails){
+                KeycloakTokenDetails details=(KeycloakTokenDetails) auth.getDetails();
+                String accessToken=details.getAccessToken();
+                String refreshToken=details.getRefreshToken();
+                Date expiresIn=details.getExpiration();
+                if (accessToken!=null) {
+                    Cookie access = new Cookie(ACCESS_TOKEN_PARAM, accessToken);
+                    access.setSecure(false);
+                    access.setMaxAge(Long.valueOf(expiresIn.getTime()).intValue());
+                    response.addCookie(access);
                 }
-            }*/
+                if (refreshToken!=null) {
+                    Cookie refresh = new Cookie(REFRESH_TOKEN_PARAM, refreshToken);
+                    refresh.setSecure(false);
+                    refresh.setMaxAge(Long.valueOf(expiresIn.getTime()).intValue());
+                    response.addCookie(refresh);
+                }
+            }
             try {
                 response.sendRedirect(configuration(provider).getInternalRedirectUri());
             }catch (IOException e){

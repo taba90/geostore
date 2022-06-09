@@ -15,14 +15,15 @@ public class KeyCloakSecurityConfiguration {
     static final String CONF_BEAN_NAME = "keycloak" + CONFIG_NAME_SUFFIX;
 
     static final String CACHE_BEAN_NAME ="keycloakCache";
+
     @Bean(value=CONF_BEAN_NAME)
-    public KeyCloakConfiguration keyCloakConfiguration(){
+    public KeyCloakConfiguration keycloakConfiguration(){
         return new KeyCloakConfiguration();
     }
 
     @Bean
-    public KeyCloakFilter keyCloakFilter(){
-        return new KeyCloakFilter(keyCloakHelper(),keycloakCache());
+    public KeyCloakFilter keycloakFilter(){
+        return new KeyCloakFilter(keyCloakHelper(),keycloakCache(), keycloakConfiguration());
     }
 
     @Bean(value= CACHE_BEAN_NAME)
@@ -33,7 +34,7 @@ public class KeyCloakSecurityConfiguration {
     @Bean
     public AdapterDeploymentContext keycloackContext(){
         KeycloakDeployment deployment =
-                KeycloakDeploymentBuilder.build(keyCloakConfiguration().readAdapterConfig());
+                KeycloakDeploymentBuilder.build(keycloakConfiguration().readAdapterConfig());
         return new AdapterDeploymentContext(deployment);
     }
 

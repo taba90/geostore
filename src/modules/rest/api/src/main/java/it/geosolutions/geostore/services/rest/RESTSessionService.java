@@ -125,6 +125,15 @@ public interface RESTSessionService {
     @Secured({ "ROLE_ADMIN", "ROLE_USER" })
     @Deprecated
     public SessionToken refresh(@Context SecurityContext sc, @PathParam("sessionId") String sessionId, @PathParam("refreshToken") String refreshToken)  throws ParseException;
+
+    @POST
+    @Path("/refresh")
+    @Produces({MediaType.APPLICATION_JSON})
+    @Secured({ "ROLE_ADMIN", "ROLE_USER" })
+    @Deprecated
+    public default SessionToken refreshWithParams(@Context SecurityContext sc, @QueryParam("sessionId") String sessionId, @QueryParam("refreshToken") String refreshToken)  throws ParseException{
+        return refresh(sc,sessionId,refreshToken);
+    }
     /**
      * Removes the given session.
      * 

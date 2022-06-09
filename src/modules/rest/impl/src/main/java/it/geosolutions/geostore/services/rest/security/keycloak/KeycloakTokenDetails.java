@@ -1,5 +1,6 @@
 package it.geosolutions.geostore.services.rest.security.keycloak;
 
+import java.util.Calendar;
 import java.util.Date;
 
 public class KeycloakTokenDetails {
@@ -11,13 +12,22 @@ public class KeycloakTokenDetails {
     public KeycloakTokenDetails(String accessToken, String refreshToken,int exp){
         this.accessToken=accessToken;
         this.refreshToken=refreshToken;
-        this.expiration=new Date(exp*1000);
+        Date epoch=new Date(0);
+        this.expiration=expirationDate(epoch,exp);
     }
 
-    public KeycloakTokenDetails(String accessToken, String refreshToken,long exp){
+    public KeycloakTokenDetails(String accessToken, String refreshToken,long expIn){
         this.accessToken=accessToken;
         this.refreshToken=refreshToken;
-        this.expiration=new Date(exp*1000);
+        Date start=new Date();
+        this.expiration=expirationDate(start,Long.valueOf(expIn).intValue());
+    }
+
+    private Date expirationDate(Date start, int toAdd){
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(start);
+        calendar.add(Calendar.SECOND, toAdd);
+        return calendar.getTime();
     }
 
     public String getAccessToken() {

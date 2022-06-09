@@ -36,6 +36,8 @@ import org.keycloak.adapters.springsecurity.facade.SimpleHttpFacade;
 import org.keycloak.adapters.springsecurity.token.KeycloakAuthenticationToken;
 import org.keycloak.adapters.springsecurity.token.SpringSecurityAdapterTokenStoreFactory;
 import org.keycloak.authorization.client.util.Http;
+import org.keycloak.representations.AccessTokenResponse;
+import org.keycloak.representations.adapters.config.AdapterConfig;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
@@ -61,10 +63,12 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import static it.geosolutions.geostore.services.rest.SessionServiceDelegate.PROVIDER_KEY;
 import static it.geosolutions.geostore.services.rest.security.keycloak.KeyCloakLoginService.KEYCLOAK_REDIRECT;
 import static it.geosolutions.geostore.services.rest.security.oauth2.OAuth2Utils.ACCESS_TOKEN_PARAM;
 
@@ -77,6 +81,8 @@ public class KeyCloakFilter extends GenericFilterBean {
     // the context of the keycloak environment (realm, URL, client-secrets etc.)
     private KeyCloakHelper helper;
 
+    private KeyCloakConfiguration configuration;
+
     @Autowired
     protected UserService userService;
 
@@ -85,23 +91,31 @@ public class KeyCloakFilter extends GenericFilterBean {
 
     private TokenAuthenticationCache cache;
 
-    public KeyCloakFilter (KeyCloakHelper helper, TokenAuthenticationCache cache){
+    public KeyCloakFilter (KeyCloakHelper helper, TokenAuthenticationCache cache, KeyCloakConfiguration configuration){
         this.helper=helper;
         this.authenticationMapper = new KeycloakAuthenticationProvider();
         SimpleAuthorityMapper simpleAuthMapper = new SimpleAuthorityMapper();
         simpleAuthMapper.setPrefix("");
         authenticationMapper.setGrantedAuthoritiesMapper(simpleAuthMapper);
         this.cache=cache;
+        this.configuration=configuration;
     }
 
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
-        if (SecurityContextHolder.getContext().getAuthentication()==null) {
+        if (enabledAndValid() && SecurityContextHolder.getContext().getAuthentication()==null) {
             Authentication authentication = authenticate((HttpServletRequest) request, (HttpServletResponse) response);
-            if (authentication != null) SecurityContextHolder.getContext().setAuthentication(authentication);
+            if (authentication != null){
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+                RequestContextHolder.getRequestAttributes().setAttribute(PROVIDER_KEY,"keycloak",0);
+            }
         }
         chain.doFilter(request,response);
+    }
+
+    private boolean enabledAndValid(){
+        return configuration.isEnabled() && configuration.getJsonConfig()!=null;
     }
 
     protected Authentication authenticateAndUpdateCache(HttpServletRequest request, HttpServletResponse response) {
@@ -125,10 +139,9 @@ public class KeyCloakFilter extends GenericFilterBean {
 
     protected void updateCache(Authentication authentication){
         Object details=authentication.getDetails();
-        if (details instanceof SimpleKeycloakAccount){
-            SimpleKeycloakAccount keycloakDetails=(SimpleKeycloakAccount) details;
-            KeycloakSecurityContext context=keycloakDetails.getKeycloakSecurityContext();
-            String accessToken=context!=null ? context.getTokenString():null;
+        if (details instanceof KeycloakTokenDetails){
+            KeycloakTokenDetails keycloakDetails=(KeycloakTokenDetails) details;
+            String accessToken=keycloakDetails.getAccessToken();
             if (accessToken!=null){
                 cache.putCacheEntry(accessToken,authentication);
             }
@@ -140,6 +153,14 @@ public class KeyCloakFilter extends GenericFilterBean {
         String token = OAuth2Utils.tokenFromParamsOrBearer(ACCESS_TOKEN_PARAM, request);
         if (token != null) {
             authentication = cache.get(token);
+            if (authentication!=null && authentication.getDetails() instanceof KeycloakTokenDetails){
+                KeycloakTokenDetails details=(KeycloakTokenDetails) authentication.getDetails();
+                if (details.getExpiration().before(new Date())){
+                    tryRefresh(details.getRefreshToken(),details.getAccessToken());
+                    authentication=cache.get(token);
+                }
+            }
+
             if (authentication == null) {
                 authentication = authenticateAndUpdateCache(request, response);
             }
@@ -149,6 +170,16 @@ public class KeyCloakFilter extends GenericFilterBean {
         return authentication;
     }
 
+    private void tryRefresh(String refreshToken, String oldAccessToken){
+        if (refreshToken!=null) {
+            AdapterConfig adapterConfig = configuration.readAdapterConfig();
+            AccessTokenResponse response = helper.refreshToken(adapterConfig, refreshToken);
+            String newAccessToken = response.getToken();
+            long exp = response.getExpiresIn();
+            String newRefreshToken = response.getRefreshToken();
+            helper.updateAuthentication(cache, oldAccessToken, newAccessToken, newRefreshToken, exp);
+        }
+    }
 
     private Authentication createPreAuth(Authentication authentication, HttpServletRequest request,HttpServletResponse response){
             User user=retrieveUserWithAuthorities(SecurityUtils.getUsername(authentication.getPrincipal()),request,response);
