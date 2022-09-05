@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.common.ConsoleNotifier;
+import it.geosolutions.geostore.core.model.User;
 import it.geosolutions.geostore.services.rest.RESTSessionService;
 import it.geosolutions.geostore.services.rest.impl.RESTSessionServiceImpl;
 import it.geosolutions.geostore.services.rest.model.SessionToken;
@@ -119,15 +120,13 @@ public class KeycloakSessionServiceTest extends KeycloakTestSupport{
     @Test
     public void testRefreshToken() throws JsonProcessingException, ParseException {
         KeyCloakConfiguration configuration=createConfiguration();
-        TokenAuthenticationCache cache=new TokenAuthenticationCache();
+        TokenAuthenticationCache cache=setupCache();
         PreAuthenticatedAuthenticationToken authenticationToken=new PreAuthenticatedAuthenticationToken("user","",new ArrayList<>());
         KeycloakTokenDetails details=new KeycloakTokenDetails("access_token",REFRESH_TOKEN,0l);
         authenticationToken.setDetails(details);
         cache.putCacheEntry(ACCESS_TOKEN,authenticationToken);
         try(MockedStatic<GeoStoreContext> utilities = Mockito.mockStatic(GeoStoreContext.class)){
-            utilities.when(()-> GeoStoreContext.bean(KeyCloakConfiguration.class)).thenReturn(configuration);
-            utilities.when(()-> GeoStoreContext.bean(KeyCloakHelper.class)).thenReturn(helper);
-            utilities.when(()-> GeoStoreContext.bean(CACHE_BEAN_NAME,TokenAuthenticationCache.class)).thenReturn(cache);
+            mockBeansLookup(utilities,configuration,cache);
             MockHttpServletRequest request=new MockHttpServletRequest();
             MockHttpServletResponse response=new MockHttpServletResponse();
             ServletRequestAttributes attributes = new ServletRequestAttributes(request,response);
@@ -136,7 +135,7 @@ public class KeycloakSessionServiceTest extends KeycloakTestSupport{
             attributes.setAttribute(REFRESH_TOKEN_PARAM,REFRESH_TOKEN,0);
             RequestContextHolder.setRequestAttributes(attributes);
             RESTSessionService sessionService=new RESTSessionServiceImpl();
-            new KeycloakSessionServiceDelegate(sessionService);
+            new KeycloakSessionServiceDelegate(sessionService,null);
             SessionToken token=new SessionToken();
             token.setTokenType("Bearer");
             token.setAccessToken(ACCESS_TOKEN);
@@ -152,28 +151,44 @@ public class KeycloakSessionServiceTest extends KeycloakTestSupport{
 
 
     @Test
-    public void testLogout() throws JsonProcessingException, ParseException {
+    public void testGetUser() throws JsonProcessingException {
         KeyCloakConfiguration configuration=createConfiguration();
-        PreAuthenticatedAuthenticationToken authenticationToken=new PreAuthenticatedAuthenticationToken("user","",new ArrayList<>());
-        KeycloakTokenDetails details=new KeycloakTokenDetails("access_token",REFRESH_TOKEN,0l);
-        authenticationToken.setDetails(details);
-        TokenAuthenticationCache cache=new TokenAuthenticationCache();
-        cache.putCacheEntry(ACCESS_TOKEN,authenticationToken);
-        SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+        TokenAuthenticationCache cache=setupCache();
         try(MockedStatic<GeoStoreContext> utilities = Mockito.mockStatic(GeoStoreContext.class)){
-            utilities.when(()->GeoStoreContext.bean(KeyCloakConfiguration.class)).thenReturn(configuration);
-            utilities.when(()-> GeoStoreContext.bean(KeyCloakHelper.class)).thenReturn(helper);
-            utilities.when(()-> GeoStoreContext.bean(CACHE_BEAN_NAME,TokenAuthenticationCache.class)).thenReturn(cache);
+            mockBeansLookup(utilities,configuration,cache);
+            MockHttpServletRequest request=new MockHttpServletRequest();
+            MockHttpServletResponse response=new MockHttpServletResponse();
+            ServletRequestAttributes attributes = new ServletRequestAttributes(request,response);
+            attributes.setAttribute(PROVIDER_KEY,"keycloak",0);
+            attributes.setAttribute(ACCESS_TOKEN_PARAM,ACCESS_TOKEN,0);
+            attributes.setAttribute(REFRESH_TOKEN_PARAM,REFRESH_TOKEN,0);
+            RequestContextHolder.setRequestAttributes(attributes);
+            RESTSessionService sessionService=new RESTSessionServiceImpl();
+            new KeycloakSessionServiceDelegate(sessionService,null);
+
+            //start the test
+            User user=sessionService.getUser(ACCESS_TOKEN,false);
+            assertEquals("user",user.getName());
+        }
+    }
+
+
+    @Test
+    public void testLogout() throws JsonProcessingException {
+        KeyCloakConfiguration configuration=createConfiguration();
+        TokenAuthenticationCache cache=setupCache();
+        try(MockedStatic<GeoStoreContext> utilities = Mockito.mockStatic(GeoStoreContext.class)){
+            mockBeansLookup(utilities,configuration,cache);
             MockHttpServletRequest request=new MockHttpServletRequest();
             request.setParameter(ACCESS_TOKEN_PARAM,ACCESS_TOKEN);
             // test request.logout();
-            request.setUserPrincipal(authenticationToken);
+            request.setUserPrincipal(cache.get(ACCESS_TOKEN));
             MockHttpServletResponse response=new MockHttpServletResponse();
             ServletRequestAttributes attributes = new ServletRequestAttributes(request,response);
             attributes.setAttribute(PROVIDER_KEY,"keycloak",0);
             RequestContextHolder.setRequestAttributes(attributes);
             RESTSessionService sessionService=new RESTSessionServiceImpl();
-            new KeycloakSessionServiceDelegate(sessionService);
+            new KeycloakSessionServiceDelegate(sessionService,null);
 
             // start the test
             sessionService.removeSession();
@@ -181,6 +196,24 @@ public class KeycloakSessionServiceTest extends KeycloakTestSupport{
             assertNull(SecurityContextHolder.getContext().getAuthentication());
             assertNull(request.getUserPrincipal());
         }
+    }
+
+
+
+    private TokenAuthenticationCache setupCache() {
+        PreAuthenticatedAuthenticationToken authenticationToken=new PreAuthenticatedAuthenticationToken("user","",new ArrayList<>());
+        KeycloakTokenDetails details=new KeycloakTokenDetails("access_token",REFRESH_TOKEN,0l);
+        authenticationToken.setDetails(details);
+        TokenAuthenticationCache cache=new TokenAuthenticationCache();
+        cache.putCacheEntry(ACCESS_TOKEN,authenticationToken);
+        SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+        return cache;
+    }
+
+    private void mockBeansLookup(MockedStatic<GeoStoreContext> utilities, KeyCloakConfiguration configuration,TokenAuthenticationCache cache){
+        utilities.when(()->GeoStoreContext.bean(KeyCloakConfiguration.class)).thenReturn(configuration);
+        utilities.when(()-> GeoStoreContext.bean(KeyCloakHelper.class)).thenReturn(helper);
+        utilities.when(()-> GeoStoreContext.bean(CACHE_BEAN_NAME,TokenAuthenticationCache.class)).thenReturn(cache);
     }
 
     @AfterClass
