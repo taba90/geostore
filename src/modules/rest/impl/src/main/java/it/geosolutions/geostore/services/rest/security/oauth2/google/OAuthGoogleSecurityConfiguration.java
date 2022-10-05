@@ -68,7 +68,7 @@ public class OAuthGoogleSecurityConfiguration extends OAuth2GeoStoreSecurityConf
      */
     @Override
     @Bean(value = "googleOpenIdRestTemplate")
-    @Scope(value = "session", proxyMode = ScopedProxyMode.TARGET_CLASS)
+    @Scope(value = "request", proxyMode = ScopedProxyMode.TARGET_CLASS)
     public GeoStoreOAuthRestTemplate oauth2RestTemplate() {
         return super.oauth2RestTemplate();
     }
